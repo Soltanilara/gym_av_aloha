@@ -33,7 +33,18 @@ class ThreadNeedleEnv(AVAlohaEnv):
         self.distractor3_joint = self.mjcf_root.find('joint', 'distractor3_joint')
         self.adverse_joint = self.mjcf_root.find('joint', 'adverse_joint')
 
-        
+    def set_qpos(self, qpos, limit=True):
+        valid_idx = np.arange(len(self.physics.data.qpos))
+
+        # find the qpos idx of distractors + adverse joints 4*7 in total
+        remove_objects = [self.distractor1_joint, self.distractor2_joint, self.distractor3_joint, self.adverse_joint]
+        for obj in remove_objects:
+            bad_idx = np.arange(self.physics.bind(obj).qposadr, self.physics.bind(obj).qposadr + 7)
+            # remove the bad idx from valid idx
+            valid_idx = np.setdiff1d(valid_idx, bad_idx)
+
+        self.physics.data.qpos[valid_idx] = qpos
+        self.physics.forward()
 
     def reset(self, seed=None, options=None) -> tuple:
         super().reset(seed=seed, options=options)

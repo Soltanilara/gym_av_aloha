@@ -17,6 +17,7 @@ from gym_av_aloha.env.sim_config import (
 )
 from gym_av_aloha.env.robot import SimRobotArm
 import os
+import logging
 
 class AVAlohaEnv(gym.Env):
 

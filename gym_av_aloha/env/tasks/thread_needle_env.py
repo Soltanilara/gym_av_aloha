@@ -2,7 +2,7 @@ from gym_av_aloha.env.sim_env import AVAlohaEnv
 from gym_av_aloha.env.sim_config import XML_DIR
 import numpy as np
 import os
-
+from gymnasium import spaces
 
 class ThreadNeedleEnv(AVAlohaEnv):
     XML = os.path.join(XML_DIR, 'task_thread_needle.xml')
@@ -11,6 +11,7 @@ class ThreadNeedleEnv(AVAlohaEnv):
     RIGHT_POSE = [0, -0.082, 1.06, 0, -0.953, 0]
     RIGHT_GRIPPER_POSE = 1
     MIDDLE_POSE = [0, -0.6, 0.5, 0, 0.5, 0, 0]
+    ENV_STATE_DIM = 14
 
     def __init__(
         self, 
@@ -32,6 +33,22 @@ class ThreadNeedleEnv(AVAlohaEnv):
         self.distractor2_joint = self.mjcf_root.find('joint', 'distractor2_joint')
         self.distractor3_joint = self.mjcf_root.find('joint', 'distractor3_joint')
         self.adverse_joint = self.mjcf_root.find('joint', 'adverse_joint')
+
+        self.observation_space_dict['environment_state'] = spaces.Box(
+            low=-np.inf,
+            high=np.inf,
+            shape=(self.ENV_STATE_DIM,),
+            dtype=np.float64,
+        )
+        self.observation_space = spaces.Dict(self.observation_space_dict)
+
+    def get_obs(self) -> np.ndarray:
+        obs = super().get_obs()
+        obs['environment_state'] = np.concatenate([
+            self.physics.bind(self.needle_joint).qpos,
+            self.physics.bind(self.wall_joint).qpos,
+        ])
+        return obs
 
     def set_qpos(self, qpos, limit=True):
         valid_idx = np.arange(len(self.physics.data.qpos))

@@ -38,6 +38,9 @@ def main():
     else:
         eye_keys = {}
 
+    env = gym.make(env, fps=25)
+    observation, info = env.reset(seed=42)
+
     dataset = LeRobotDataset.create(
         repo_id,
         fps,
@@ -45,6 +48,7 @@ def main():
         features = {
             "action": {"dtype": "float32", "shape": (21,), 'names': None},
             "observation.state": {"dtype": "float32", "shape": (21,), 'names': None},
+            "observation.environment_state": {"dtype": "float32", "shape": (env.unwrapped.ENV_STATE_DIM,), 'names': None},
             "observation.qpos": {"dtype": "float32", "shape": (qpos_len,), 'names': None},
             "observation.images.zed_cam_left" : {'dtype': 'video', 'shape': (480, 640, 3), 'names': ['height', 'width', 'channel']},
             "observation.images.zed_cam_right" : {'dtype': 'video', 'shape': (480, 640, 3), 'names': ['height', 'width', 'channel']},
@@ -56,9 +60,6 @@ def main():
         },
         image_writer_threads=4 * 2
     )
-
-    env = gym.make(env, fps=25)
-    observation, info = env.reset(seed=42)
 
     action = np.concatenate([
         env.unwrapped.LEFT_POSE,
@@ -108,6 +109,7 @@ def main():
             frame = {
                 "action": action.astype(np.float32),
                 "observation.state": obs['agent_pos'].astype(np.float32),
+                "observation.environment_state": obs['environment_state'].astype(np.float32),
                 "observation.qpos": qpos.astype(np.float32),
                 **{f"observation.images.{k}": v for k,v in obs['pixels'].items()},
                 'task': description,

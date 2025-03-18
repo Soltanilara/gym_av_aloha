@@ -94,15 +94,15 @@ class AVAlohaEnv(gym.Env):
             has_gripper=False,
         )
 
-        observation_space_dict = {}
-        observation_space_dict['agent_pos'] = spaces.Box(
+        self.observation_space_dict = {}
+        self.observation_space_dict['agent_pos'] = spaces.Box(
             low=-np.inf,
             high=np.inf,
             shape=(STATE_DIM,),
             dtype=np.float64,
         )
         if len(self.cameras) > 0:
-            observation_space_dict['pixels'] = spaces.Dict(
+            self.observation_space_dict['pixels'] = spaces.Dict(
                 {
                     camera: spaces.Box(
                         low=0,
@@ -114,7 +114,7 @@ class AVAlohaEnv(gym.Env):
                 }
             )
 
-        self.observation_space = spaces.Dict(observation_space_dict)
+        self.observation_space = spaces.Dict(self.observation_space_dict)
         self.action_space = spaces.Box(low=-np.inf, high=np.inf, shape=(ACTION_DIM,), dtype=np.float64) 
 
     def get_obs(self) -> np.ndarray:

@@ -2,6 +2,7 @@ from gym_av_aloha.env.sim_env import AVAlohaEnv
 from gym_av_aloha.env.sim_config import XML_DIR
 import numpy as np
 import os
+from gymnasium import spaces
 
 class PourTestTubeEnv(AVAlohaEnv):
     XML = os.path.join(XML_DIR, 'task_pour_test_tube.xml')
@@ -10,6 +11,7 @@ class PourTestTubeEnv(AVAlohaEnv):
     RIGHT_POSE = [0, -0.082, 1.06, 0, -0.953, 0]
     RIGHT_GRIPPER_POSE = 1
     MIDDLE_POSE = [0, -0.8, 0.8, 0, 0.5, 0, 0]
+    ENV_STATE_DIM = 21
 
     def __init__(
         self, 
@@ -22,6 +24,23 @@ class PourTestTubeEnv(AVAlohaEnv):
         self.ball_joint = self.mjcf_root.find('joint', 'ball_joint')
         self.tube1_joint = self.mjcf_root.find('joint', 'tube1_joint')
         self.tube2_joint = self.mjcf_root.find('joint', 'tube2_joint')
+
+        self.observation_space_dict['environment_state'] = spaces.Box(
+            low=-np.inf,
+            high=np.inf,
+            shape=(self.ENV_STATE_DIM,),
+            dtype=np.float64,
+        )
+        self.observation_space = spaces.Dict(self.observation_space_dict)
+
+    def get_obs(self) -> np.ndarray:
+        obs = super().get_obs()
+        obs['environment_state'] = np.concatenate([
+            self.physics.bind(self.ball_joint).qpos,
+            self.physics.bind(self.tube1_joint).qpos,
+            self.physics.bind(self.tube2_joint).qpos,
+        ])
+        return obs
 
 
     def reset(self, seed=None, options=None):

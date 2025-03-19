@@ -231,8 +231,8 @@ class AVAlohaEnv(gym.Env):
 
     def render(self):
         return self.physics.render(
-            height=225,
-            width=300,
+            height=240,
+            width=304,
             camera_id=self.render_camera
         )
 
@@ -278,7 +278,6 @@ class AVAlohaEnv(gym.Env):
         super().reset(seed=seed, options=options)
 
         self.step_count = 0
-        self.max_reward = 0
 
         # reset physics
         self.physics.reset()

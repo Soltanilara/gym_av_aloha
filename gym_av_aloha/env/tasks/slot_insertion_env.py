@@ -4,6 +4,7 @@ import numpy as np
 import os
 from gymnasium import spaces
 
+
 class SlotInsertionEnv(AVAlohaEnv):
     XML = os.path.join(XML_DIR, 'task_slot_insertion.xml')
     LEFT_POSE = [0, -0.082, 1.06, 0, -0.953, 0]
@@ -14,7 +15,7 @@ class SlotInsertionEnv(AVAlohaEnv):
     ENV_STATE_DIM = 14
 
     def __init__(
-        self, 
+        self,
         **kwargs,
     ):
         super().__init__(**kwargs)
@@ -41,7 +42,7 @@ class SlotInsertionEnv(AVAlohaEnv):
         return obs
 
     def reset(self, seed=None, options=None):
-        super().reset(seed=seed)
+        super().reset(seed=seed, options=options)
 
         # reset physics
         x_range = [-0.05, 0.05]
@@ -51,7 +52,6 @@ class SlotInsertionEnv(AVAlohaEnv):
         slot_position = np.random.uniform(ranges[:, 0], ranges[:, 1])
         slot_quat = np.array([1, 0, 0, 0])
 
-
         peg_position = np.random.uniform(ranges[:, 0], ranges[:, 1])
         peg_quat = np.array([1, 0, 0, 0])
 
@@ -60,19 +60,17 @@ class SlotInsertionEnv(AVAlohaEnv):
         z_range = [0.0, 0.0]
         ranges = np.vstack([x_range, y_range, z_range])
         stick_position = np.random.uniform(ranges[:, 0], ranges[:, 1])
-        stick_quat = np.array([1, 0, 0, 0]) 
+        stick_quat = np.array([1, 0, 0, 0])
 
         self.physics.bind(self.slot_joint).qpos = np.concatenate([slot_position, slot_quat])
         self.physics.bind(self.stick_joint).qpos = np.concatenate([stick_position, stick_quat])
 
         self.physics.forward()
 
-
         observation = self.get_obs()
         info = {"is_success": False}
 
         return observation, info
-    
 
     def get_reward(self):
 
@@ -95,7 +93,7 @@ class SlotInsertionEnv(AVAlohaEnv):
         for geom1, geom2 in contact_pairs:
             if geom1 == "stick" and geom2.startswith("right"):
                 touch_right_gripper = True
-            
+
             if geom1 == "stick" and geom2.startswith("left"):
                 touch_left_gripper = True
 
@@ -109,16 +107,17 @@ class SlotInsertionEnv(AVAlohaEnv):
                 pins_touch = True
 
         reward = 0
-        if touch_left_gripper and touch_right_gripper: # touch both
+        if touch_left_gripper and touch_right_gripper:  # touch both
             reward = 1
-        if touch_left_gripper and touch_right_gripper and (not stick_touch_table): # grasp stick
+        if touch_left_gripper and touch_right_gripper and (not stick_touch_table):  # grasp stick
             reward = 2
-        if stick_touch_slot and (not stick_touch_table): # peg and socket touching
+        if stick_touch_slot and (not stick_touch_table):  # peg and socket touching
             reward = 3
-        if pins_touch: # successful insertion
+        if pins_touch:  # successful insertion
             reward = 4
         return reward
-    
+
+
 def main():
     import gym_av_aloha
     from gym_av_aloha.env.sim_env import SIM_DT
@@ -142,9 +141,9 @@ def main():
         {}
     ]
 
-    observation, info = env.reset(seed=42, options = options_list[0])
+    observation, info = env.reset(seed=42, options=options_list[0])
 
-    i= 0
+    i = 0
     j = 0
     while True:
         step_start = time.time()
@@ -159,11 +158,11 @@ def main():
         time.sleep(max(0, time_until_next_step))
 
         if i % 10 == 0:
-            env.reset(seed=42, options = options_list[j % len(options_list)])
+            env.reset(seed=42, options=options_list[j % len(options_list)])
             j += 1
 
         i += 1
-        
+
 
 if __name__ == '__main__':
     main()

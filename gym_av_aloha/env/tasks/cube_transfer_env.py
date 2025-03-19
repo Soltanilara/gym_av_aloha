@@ -4,6 +4,7 @@ import numpy as np
 import os
 from gymnasium import spaces
 
+
 class CubeTransferEnv(AVAlohaEnv):
     XML = os.path.join(XML_DIR, 'task_cube_transfer.xml')
     LEFT_POSE = [0, -0.082, 1.06, 0, -0.953, 0]
@@ -14,7 +15,7 @@ class CubeTransferEnv(AVAlohaEnv):
     ENV_STATE_DIM = 7
 
     def __init__(
-        self, 
+        self,
         **kwargs,
     ):
         super().__init__(**kwargs)
@@ -76,20 +77,20 @@ class CubeTransferEnv(AVAlohaEnv):
         for geom1, geom2 in contact_pairs:
             if geom1 == "cube" and geom2.startswith("right"):
                 touch_right_gripper = True
-            
-            if geom1 == "cube" and geom2.startswith("left"): 
+
+            if geom1 == "cube" and geom2.startswith("left"):
                 touch_left_gripper = True
 
             if geom1 == "table" and geom2 == "cube":
                 cube_touch_table = True
 
         reward = 0
-        if touch_right_gripper: # touch 
+        if touch_right_gripper:  # touch
             reward = 1
-        if touch_right_gripper and not cube_touch_table and not touch_left_gripper: # grasp
+        if touch_right_gripper and not cube_touch_table and not touch_left_gripper:  # grasp
             reward = 2
             self._grasp_right = True
-        if touch_right_gripper and touch_left_gripper and not cube_touch_table and self._grasp_right: # transfer
+        if touch_right_gripper and touch_left_gripper and not cube_touch_table and self._grasp_right:  # transfer
             reward = 3
         if touch_left_gripper and not cube_touch_table and not touch_right_gripper and self._grasp_right:
             reward = 4
@@ -106,7 +107,7 @@ class CubeTransferEnv(AVAlohaEnv):
         ranges = np.vstack([x_range, y_range, z_range])
         cube_position = np.random.uniform(ranges[:, 0], ranges[:, 1])
         cube_quat = np.array([1, 0, 0, 0])
-        self.physics.bind(self.cube_joint).qpos = np.concatenate([cube_position, cube_quat])   
+        self.physics.bind(self.cube_joint).qpos = np.concatenate([cube_position, cube_quat])
 
         # reset distractors
         distractor_geoms = [self.distractor1_geom, self.distractor2_geom, self.distractor3_geom, self.adverse_geom]
@@ -114,24 +115,24 @@ class CubeTransferEnv(AVAlohaEnv):
         position = np.array([0.0, 0.0, -1.0])
         quat = np.array([1, 0, 0, 0])
         for geom, joint in zip(distractor_geoms, distractor_joints):
-            self.physics.bind(geom).contype= 0
-            self.physics.bind(geom).conaffinity= 0
-            self.physics.bind(joint).damping= 1e8
+            self.physics.bind(geom).contype = 0
+            self.physics.bind(geom).conaffinity = 0
+            self.physics.bind(joint).damping = 1e8
             self.physics.bind(joint).qpos = np.concatenate([position, quat])
 
         if (options and options.get('distractors', False)):
             distractor_geoms = [self.distractor1_geom, self.distractor2_geom, self.distractor3_geom]
             distractor_joints = [self.distractor1_joint, self.distractor2_joint, self.distractor3_joint]
             for geom, joint in zip(distractor_geoms, distractor_joints):
-                self.physics.bind(geom).contype= 1
-                self.physics.bind(geom).conaffinity= 1
-                self.physics.bind(joint).damping= 0
+                self.physics.bind(geom).contype = 1
+                self.physics.bind(geom).conaffinity = 1
+                self.physics.bind(joint).damping = 0
 
             # find random positions that are not too close to each other or cube
             distractor_positions = []
             min_distance = 0.08  # Minimum distance to maintain
 
-            distractor_scale = scale *2
+            distractor_scale = scale * 2
             x_range = [-0.05*distractor_scale, 0.05*distractor_scale]
             y_range = [0.1 - distractor_scale*0.05, 0.1 + distractor_scale*0.05]
             z_range = [0.0, 0.0]
@@ -160,11 +161,11 @@ class CubeTransferEnv(AVAlohaEnv):
                 self.physics.bind(joint).qpos = np.concatenate([distractor_positions[i], random_quats[i]])
 
         if (options and options.get('adverse', False)):
-            self.physics.bind(self.adverse_geom).contype= 1
-            self.physics.bind(self.adverse_geom).conaffinity= 1
-            self.physics.bind(self.adverse_joint).damping= 0
+            self.physics.bind(self.adverse_geom).contype = 1
+            self.physics.bind(self.adverse_geom).conaffinity = 1
+            self.physics.bind(self.adverse_joint).damping = 0
 
-            distractor_scale = scale *2
+            distractor_scale = scale * 2
             x_range = [-0.05*distractor_scale, 0.05*distractor_scale]
             y_range = [0.1 - distractor_scale*0.05, 0.1 + distractor_scale*0.05]
             z_range = [0.0, 0.0]
@@ -179,7 +180,6 @@ class CubeTransferEnv(AVAlohaEnv):
                     adverse_quat = np.array([np.cos(yaw / 2), 0, 0, np.sin(yaw / 2)])
                     self.physics.bind(self.adverse_joint).qpos = np.concatenate([adverse_position, adverse_quat])
                     break
-            
 
         self._grasp_right = False
 
@@ -189,7 +189,6 @@ class CubeTransferEnv(AVAlohaEnv):
         info = {"is_success": False}
 
         return observation, info
-    
 
 
 def main():
@@ -215,9 +214,9 @@ def main():
         {}
     ]
 
-    observation, info = env.reset(seed=42, options = options_list[0])
+    observation, info = env.reset(seed=42, options=options_list[0])
 
-    i= 0
+    i = 0
     j = 0
     while True:
         step_start = time.time()
@@ -232,11 +231,11 @@ def main():
         time.sleep(max(0, time_until_next_step))
 
         if i % 10 == 0:
-            env.reset(seed=42, options = options_list[j % len(options_list)])
+            env.reset(seed=42, options=options_list[j % len(options_list)])
             j += 1
 
         i += 1
-        
+
 
 if __name__ == '__main__':
     main()

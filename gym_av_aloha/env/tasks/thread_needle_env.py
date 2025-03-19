@@ -4,6 +4,7 @@ import numpy as np
 import os
 from gymnasium import spaces
 
+
 class ThreadNeedleEnv(AVAlohaEnv):
     XML = os.path.join(XML_DIR, 'task_thread_needle.xml')
     LEFT_POSE = [0, -0.082, 1.06, 0, -0.953, 0]
@@ -14,7 +15,7 @@ class ThreadNeedleEnv(AVAlohaEnv):
     ENV_STATE_DIM = 14
 
     def __init__(
-        self, 
+        self,
         **kwargs,
     ):
         super().__init__(**kwargs)
@@ -68,23 +69,21 @@ class ThreadNeedleEnv(AVAlohaEnv):
 
         # reset physics
         x_range = [0.15, 0.2]
-        y_range = [-.025,0.1]
+        y_range = [-.025, 0.1]
         z_range = [0.0, 0.0]
         ranges = np.vstack([x_range, y_range, z_range])
         needle_position = np.random.uniform(ranges[:, 0], ranges[:, 1])
         needle_quat = np.array([1, 0, 0, 0])
 
         x_range = [-0.025, 0.025]
-        y_range = [-.025,0.1]
+        y_range = [-.025, 0.1]
         z_range = [0.0, 0.0]
         ranges = np.vstack([x_range, y_range, z_range])
         wall_position = np.random.uniform(ranges[:, 0], ranges[:, 1])
-        wall_quat = np.array([1, 0, 0, 0]) 
+        wall_quat = np.array([1, 0, 0, 0])
 
         self.physics.bind(self.needle_joint).qpos = np.concatenate([needle_position, needle_quat])
         self.physics.bind(self.wall_joint).qpos = np.concatenate([wall_position, wall_quat])
-
-
 
         # reset distractors
         distractor_geoms = [self.distractor1_geom, self.distractor2_geom, self.distractor3_geom, self.adverse_geom]
@@ -92,27 +91,27 @@ class ThreadNeedleEnv(AVAlohaEnv):
         position = np.array([0.0, 0.0, -1.0])
         quat = np.array([1, 0, 0, 0])
         for geom, joint in zip(distractor_geoms, distractor_joints):
-            self.physics.bind(geom).contype= 0
-            self.physics.bind(geom).conaffinity= 0
-            self.physics.bind(joint).damping= 1e8
+            self.physics.bind(geom).contype = 0
+            self.physics.bind(geom).conaffinity = 0
+            self.physics.bind(joint).damping = 1e8
             self.physics.bind(joint).qpos = np.concatenate([position, quat])
 
         if (options and options.get('distractors', False)):
             distractor_geoms = [self.distractor1_geom, self.distractor2_geom, self.distractor3_geom]
             distractor_joints = [self.distractor1_joint, self.distractor2_joint, self.distractor3_joint]
             for geom, joint in zip(distractor_geoms, distractor_joints):
-                self.physics.bind(geom).contype= 1
-                self.physics.bind(geom).conaffinity= 1
-                self.physics.bind(joint).damping= 0
+                self.physics.bind(geom).contype = 1
+                self.physics.bind(geom).conaffinity = 1
+                self.physics.bind(joint).damping = 0
 
             # find random positions that are not too close to each other or cube
             distractor_positions = []
             min_distance = 0.1  # Minimum distance to maintain
             x_range = [0.15, 0.3]
-            y_range = [-.075,0.15]
+            y_range = [-.075, 0.15]
             z_range = [0.0, 0.0]
             ranges = np.vstack([x_range, y_range, z_range])
-            
+
             max_tries = 50
             while len(distractor_positions) < len(distractor_geoms):
                 for i in range(max_tries):
@@ -124,7 +123,7 @@ class ThreadNeedleEnv(AVAlohaEnv):
                         break
                 else:
                     distractor_positions = []
-                
+
             random_quats = []
             for _ in range(3):
                 yaw = np.random.uniform(0, 2 * np.pi)
@@ -136,12 +135,12 @@ class ThreadNeedleEnv(AVAlohaEnv):
                 self.physics.bind(joint).qpos = np.concatenate([distractor_positions[i], random_quats[i]])
 
         if (options and options.get('adverse', False)):
-            self.physics.bind(self.adverse_geom).contype= 1
-            self.physics.bind(self.adverse_geom).conaffinity= 1
-            self.physics.bind(self.adverse_joint).damping= 0
+            self.physics.bind(self.adverse_geom).contype = 1
+            self.physics.bind(self.adverse_geom).conaffinity = 1
+            self.physics.bind(self.adverse_joint).damping = 0
 
             x_range = [0.15, 0.25]
-            y_range = [-.075,0.15]
+            y_range = [-.075, 0.15]
             z_range = [0.0, 0.0]
             ranges = np.vstack([x_range, y_range, z_range])
 
@@ -155,17 +154,14 @@ class ThreadNeedleEnv(AVAlohaEnv):
                     self.physics.bind(self.adverse_joint).qpos = np.concatenate([adverse_position, adverse_quat])
                     break
 
-
         self.physics.forward()
 
         self.threaded_needle = False
-
 
         observation = self.get_obs()
         info = {"is_success": False}
 
         return observation, info
-    
 
     def get_reward(self):
 
@@ -188,7 +184,7 @@ class ThreadNeedleEnv(AVAlohaEnv):
         for geom1, geom2 in contact_pairs:
             if geom1 == "needle" and geom2.startswith("right"):
                 touch_right_gripper = True
-            
+
             if geom1 == "needle" and geom2.startswith("left"):
                 touch_left_gripper = True
 
@@ -205,18 +201,20 @@ class ThreadNeedleEnv(AVAlohaEnv):
                 needle_touch_pin = True
 
         reward = 0
-        if touch_right_gripper: # touch needle
+        if touch_right_gripper:  # touch needle
             reward = 1
-        if touch_right_gripper and (not needle_touch_table): # grasp needle
+        if touch_right_gripper and (not needle_touch_table):  # grasp needle
             reward = 2
-        if needle_touch_wall and (not needle_touch_table): # peg and socket touching
+        if needle_touch_wall and (not needle_touch_table):  # peg and socket touching
             reward = 3
-        if self.threaded_needle: # needle threaded
+        if self.threaded_needle:  # needle threaded
             reward = 4
-        if touch_left_gripper and (not touch_right_gripper) and (not needle_touch_table) and (not needle_touch_pin) and self.threaded_needle: # grasped needle on other side
+        # grasped needle on other side
+        if touch_left_gripper and (not touch_right_gripper) and (not needle_touch_table) and (not needle_touch_pin) and self.threaded_needle:
             reward = 5
         return reward
-    
+
+
 def main():
     import gym_av_aloha
     from gym_av_aloha.env.sim_env import SIM_DT
@@ -240,9 +238,9 @@ def main():
         {}
     ]
 
-    observation, info = env.reset(seed=42, options = options_list[0])
+    observation, info = env.reset(seed=42, options=options_list[0])
 
-    i= 0
+    i = 0
     j = 0
     while True:
         step_start = time.time()
@@ -257,11 +255,11 @@ def main():
         time.sleep(max(0, time_until_next_step))
 
         if i % 10 == 0:
-            env.reset(seed=42, options = options_list[j % len(options_list)])
+            env.reset(seed=42, options=options_list[j % len(options_list)])
             j += 1
 
         i += 1
-        
+
 
 if __name__ == '__main__':
     main()

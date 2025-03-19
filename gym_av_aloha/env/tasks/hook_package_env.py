@@ -4,6 +4,7 @@ import numpy as np
 import os
 from gymnasium import spaces
 
+
 class HookPackageEnv(AVAlohaEnv):
     XML = os.path.join(XML_DIR, 'task_hook_package.xml')
     LEFT_POSE = [0, -0.082, 1.06, 0, -0.953, 0]
@@ -14,7 +15,7 @@ class HookPackageEnv(AVAlohaEnv):
     ENV_STATE_DIM = 14
 
     def __init__(
-        self, 
+        self,
         **kwargs,
     ):
         super().__init__(**kwargs)
@@ -41,7 +42,7 @@ class HookPackageEnv(AVAlohaEnv):
         return obs
 
     def reset(self, seed=None, options=None):
-        super().reset(seed=seed)
+        super().reset(seed=seed, options=options)
 
         # reset physics
         x_range = [-0.1, 0.1]
@@ -56,7 +57,7 @@ class HookPackageEnv(AVAlohaEnv):
         z_range = [0.0, 0.0]
         ranges = np.vstack([x_range, y_range, z_range])
         package_position = np.random.uniform(ranges[:, 0], ranges[:, 1])
-        package_quat = np.array([1, 0, 0, 0]) 
+        package_quat = np.array([1, 0, 0, 0])
 
         self.physics.bind(self.hook_joint).qpos = np.concatenate([hook_position, hook_quat])
         self.physics.bind(self.package_joint).qpos = np.concatenate([package_position, package_quat])
@@ -67,7 +68,7 @@ class HookPackageEnv(AVAlohaEnv):
         info = {"is_success": False}
 
         return observation, info
-    
+
     def get_reward(self):
 
         touch_left_gripper = False
@@ -89,8 +90,8 @@ class HookPackageEnv(AVAlohaEnv):
         for geom1, geom2 in contact_pairs:
             if geom1.startswith("package-") and geom2.startswith("right"):
                 touch_right_gripper = True
-            
-            if geom1.startswith("package-") and geom2.startswith("left"): 
+
+            if geom1.startswith("package-") and geom2.startswith("left"):
                 touch_left_gripper = True
 
             if geom1 == "table" and geom2.startswith("package-"):
@@ -103,16 +104,17 @@ class HookPackageEnv(AVAlohaEnv):
                 pin_touched = True
 
         reward = 0
-        if touch_left_gripper and touch_right_gripper: # touch both
+        if touch_left_gripper and touch_right_gripper:  # touch both
             reward = 1
-        if touch_left_gripper and touch_right_gripper and (not package_touch_table): # grasp both
+        if touch_left_gripper and touch_right_gripper and (not package_touch_table):  # grasp both
             reward = 2
         if package_touch_hook and (not package_touch_table):
             reward = 3
         if pin_touched:
             reward = 4
         return reward
-    
+
+
 def main():
     import gym_av_aloha
     from gym_av_aloha.env.sim_env import SIM_DT
@@ -136,9 +138,9 @@ def main():
         {}
     ]
 
-    observation, info = env.reset(seed=42, options = options_list[0])
+    observation, info = env.reset(seed=42, options=options_list[0])
 
-    i= 0
+    i = 0
     j = 0
     while True:
         step_start = time.time()
@@ -153,11 +155,11 @@ def main():
         time.sleep(max(0, time_until_next_step))
 
         if i % 10 == 0:
-            env.reset(seed=42, options = options_list[j % len(options_list)])
+            env.reset(seed=42, options=options_list[j % len(options_list)])
             j += 1
 
         i += 1
-        
+
 
 if __name__ == '__main__':
     main()

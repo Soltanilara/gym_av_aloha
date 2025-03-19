@@ -16,14 +16,16 @@ CAMERAS = {
 RENDER_CAMERA = "zed_cam_left"
 
 # physics parameters
-SIM_PHYSICS_DT=0.002
+SIM_PHYSICS_DT = 0.002
 SIM_DT = 0.04
 SIM_PHYSICS_ENV_STEP_RATIO = int(SIM_DT/SIM_PHYSICS_DT)
 SIM_DT = SIM_PHYSICS_DT * SIM_PHYSICS_ENV_STEP_RATIO
 
 # robot parameters
-STATE_DIM = 21
-ACTION_DIM = 21
+AV_STATE_DIM = 21
+STATE_DIM = 14
+AV_ACTION_DIM = 21
+ACTION_DIM = 14
 
 LEFT_JOINT_NAMES = [
     "left_waist",
@@ -86,5 +88,4 @@ MIDDLE_EEF_SITE = "middle_zed_camera_center"
 # for hiding the middle arm
 MIDDLE_BASE_LINK = "middle_base_link"
 
-LIGHT_NAME= "light"
-
+LIGHT_NAME = "light"

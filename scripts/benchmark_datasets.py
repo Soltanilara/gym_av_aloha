@@ -52,5 +52,3 @@ for i in range(10):
     end_time = time.time()
     avg_time += (end_time - start_time)
 print(f"Lerobot dataset average time per batch: {avg_time / 64:.4f} seconds")
-
-

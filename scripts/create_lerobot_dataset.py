@@ -9,21 +9,13 @@ def main():
     from lerobot.common.datasets.lerobot_dataset import LeRobotDataset
     import cv2
 
-    env = "gym_av_aloha/peg-insertion-v1"
-    traj_dir = os.path.join("results", "sim_peg_insertion")
-    swap_action = True
-    repo_id = "iantc104/av_aloha_sim_peg_insertion"
-    description = "insert the red peg into the blue socket"
+    env = "gym_av_aloha/pour-test-tube-v1"
+    traj_dir = os.path.join("results", "sim_pour_test_tube")
+    swap_action = False
+    repo_id = "iantc104/av_aloha_sim_pour_test_tube"
+    description = "pour the red ball inside the right test tube into the left test tube"
     fps = 25
-    add_eye_data = True
-
-    # env = "gym_av_aloha/thread-needle-v1"
-    # traj_dir = os.path.join("results", "sim_thread_needle")
-    # swap_action = True
-    # repo_id = "iantc104/av_aloha_sim_thread_needle"
-    # description = "insert the red peg into the blue socket"
-    # fps = 25
-    # add_eye_data = True
+    add_eye_data = False
     
     traj_file = os.path.join(traj_dir, f'episode_0.pkl')
     with open(traj_file, 'rb') as f:

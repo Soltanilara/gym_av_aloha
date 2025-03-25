@@ -54,7 +54,7 @@ def main(args):
         subset = Subset(dataset, range(dataset.episode_data_index['from'][i], dataset.episode_data_index['to'][i]))
         dataloader = DataLoader(subset, batch_size=len(subset), shuffle=False)
         batch = next(iter(dataloader))  # Fetches the batch
-        batch = {k:convert(k,v,ds_meta) for k,v in batch.items() if k in ds_meta.features}
+        batch = {k:convert(k,v,ds_meta) for k,v in batch.items() if k in features}
         replay_buffer.add_episode(batch, compressors='disk')
         print(f"Episode {i} converted and added to replay buffer.")
 

@@ -48,6 +48,11 @@ def main(args):
             del features[key]
             print(f"Removed {key} from features because it is not an AV image.")
 
+    for key in features:
+        print(f"Converting {key}...")
+        if features[key]['dtype'] == 'image':
+            print(f"Image shape: {features[key]['shape']}")
+
     dataset = LeRobotDataset(repo_id)
     # iterate through dataset
     for i in range(replay_buffer.n_episodes, ds_meta.total_episodes):
@@ -85,7 +90,8 @@ if __name__ == "__main__":
     parser.add_argument("--av_images_only", action='store_true', help="Only convert AV images.")
 
     """"
-    python convert_lerobot_to_zarr.py --repo_id iantc104/av_aloha_sim_thread_needle --av_images_only --image_size 240 320"
+    python scripts/convert_lerobot_to_zarr.py --repo_id iantc104/av_aloha_sim_thread_needle --av_images_only --image_size 240 320"
+    python scripts/convert_lerobot_to_zarr.py --repo_id lerobot/pusht_keypoints
     """
 
     args = parser.parse_args()

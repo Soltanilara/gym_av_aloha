@@ -7,6 +7,7 @@ from gym_av_aloha.common.replay_buffer import ReplayBuffer
 from torchvision.transforms import Resize
 import torch
 import os
+from tqdm import tqdm
 
 def main(args):
     repo_id = args.repo_id
@@ -51,9 +52,21 @@ def main(args):
     # iterate through dataset
     for i in range(replay_buffer.n_episodes, ds_meta.total_episodes):
         print(f"Converting episode {i}...")
-        subset = Subset(dataset, range(dataset.episode_data_index['from'][i], dataset.episode_data_index['to'][i]))
-        dataloader = DataLoader(subset, batch_size=len(subset), shuffle=False)
-        batch = next(iter(dataloader))  # Fetches the batch
+        from_idx = dataset.episode_data_index['from'][i]
+        to_idx = dataset.episode_data_index['to'][i]
+        subset = Subset(dataset, range(from_idx, to_idx))
+        dataloader = DataLoader(subset, batch_size=16, shuffle=False, num_workers=8)
+
+        data = []
+        for batch in tqdm(dataloader):
+            if "task" in batch:
+                del batch["task"]
+            data.append(batch)
+        # since batch is a dict go through keys and cat them into a batch
+        batch = {k: torch.cat([d[k] for d in data], dim=0) for k in data[0].keys()}
+
+        assert batch['action'].shape[0] == to_idx - from_idx, f"Batch size does not match episode length. Expected {to_idx - from_idx}, got {batch['action'].shape[0]}."
+
         batch = {k:convert(k,v,ds_meta) for k,v in batch.items() if k in features}
         replay_buffer.add_episode(batch, compressors='disk')
         print(f"Episode {i} converted and added to replay buffer.")
@@ -72,7 +85,7 @@ if __name__ == "__main__":
     parser.add_argument("--av_images_only", action='store_true', help="Only convert AV images.")
 
     """"
-    python convert_lerobot_to_zarr.py --repo_id iantc104/av_aloha_sim_peg_insertion --av_images_only --image_size 240 320"
+    python convert_lerobot_to_zarr.py --repo_id iantc104/av_aloha_sim_thread_needle --av_images_only --image_size 240 320"
     """
 
     args = parser.parse_args()

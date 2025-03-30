@@ -12,8 +12,9 @@ from tqdm import tqdm
 def main(args):
     repo_id = args.repo_id
     image_size = args.image_size
+    rename = args.rename
 
-    zarr_path = os.path.join("outputs", repo_id)
+    zarr_path = os.path.join("outputs", repo_id if not rename else rename)
 
     replay_buffer = ReplayBuffer.create_from_path(zarr_path=zarr_path, mode="a")
 
@@ -87,11 +88,13 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Convert LeRobot dataset to Zarr format.")
     parser.add_argument("--repo_id", type=str, default="iantc104/av_aloha_sim_peg_insertion", help="Repository ID for the dataset.")
     parser.add_argument("--image_size", type=int, nargs=2, default=(240, 320), help="Size to resize images to (height, width).")
+    parser.add_argument("--rename", type=str, default=None, help="Rename the dataset to this name.")
     parser.add_argument("--av_images_only", action='store_true', help="Only convert AV images.")
 
     """"
-    python scripts/convert_lerobot_to_zarr.py --repo_id iantc104/av_aloha_sim_thread_needle --av_images_only --image_size 240 320"
+    python scripts/convert_lerobot_to_zarr.py --repo_id iantc104/av_aloha_sim_thread_needle --av_images_only --image_size 160 208 --rename iantc104/av_aloha_sim_thread_needle_160x208
     python scripts/convert_lerobot_to_zarr.py --repo_id lerobot/pusht_keypoints
+    python scripts/convert_lerobot_to_zarr.py --repo_id lerobot/pusht --image_size 96 96
     """
 
     args = parser.parse_args()

@@ -18,6 +18,14 @@ from lerobot.common.datasets.utils import (
 ROOT = path.dirname(path.dirname(gym_av_aloha.__file__))
 print(f"Loading AVAlohaImageDataset zarr from {ROOT}")
 
+def get_ds_meta_from_zarr(zarr_path: str = None, repo_id: str = None, root: str = ROOT) -> LeRobotDatasetMetadata:
+    if zarr_path is None:
+        assert repo_id is not None, "Either `repo_id` or `zarr_path` must be provided."
+        zarr_path = path.join(root, "outputs", repo_id)
+    replay_buffer = ReplayBuffer.copy_from_path(zarr_path)
+    meta_repo_id = str(np.array(replay_buffer.meta['repo_id']))
+    return LeRobotDatasetMetadata(meta_repo_id)
+
 
 class AVAlohaImageDataset(torch.utils.data.Dataset):
     def __init__(self,
@@ -39,9 +47,9 @@ class AVAlohaImageDataset(torch.utils.data.Dataset):
         self.episodes = episodes
 
         self.replay_buffer = ReplayBuffer.copy_from_path(self.zarr_path)
-        if repo_id is None:
-            repo_id = str(np.array(self.replay_buffer.meta['repo_id']))
-        self.meta = LeRobotDatasetMetadata(repo_id)
+        meta_repo_id = str(np.array(self.replay_buffer.meta['repo_id']))
+        if meta_repo_id != repo_id: print("[AVAlohaImageDataset] Warning: repo_id mismatch, using metadata from zarr.")
+        self.meta = LeRobotDatasetMetadata(meta_repo_id)
 
         self.image_transforms = image_transforms
 

@@ -56,6 +56,11 @@ class AVAlohaImageDataset(torch.utils.data.Dataset):
         # Check timestamps
         timestamps = np.array(self.replay_buffer['timestamp'])
         episode_indices = np.array(self.replay_buffer['episode_index'])
+        # keep only timestamps and episode_indices for the selected episodes
+        if self.episodes is not None:
+            mask = np.isin(episode_indices, self.episodes)
+            timestamps = timestamps[mask]
+            episode_indices = episode_indices[mask]
         ep_data_index_np = {k: t.numpy() for k, t in self.episode_data_index.items()}
         check_timestamps_sync(timestamps, episode_indices, ep_data_index_np, self.fps, self.tolerance_s)
 

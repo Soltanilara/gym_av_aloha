@@ -61,6 +61,11 @@ class AVAlohaImageDataset(torch.utils.data.Dataset):
             for i, length in enumerate(self.replay_buffer.episode_lengths)
         }, self.episodes)
 
+        if self.episodes is not None:
+            self.length = sum([self.replay_buffer.episode_lengths[i] for i in episodes])
+        else:
+            self.length = self.replay_buffer.n_steps
+
         # Check timestamps
         timestamps = np.array(self.replay_buffer['timestamp'])
         episode_indices = np.array(self.replay_buffer['episode_index'])
@@ -132,7 +137,7 @@ class AVAlohaImageDataset(torch.utils.data.Dataset):
         return self.meta.image_keys
 
     def __len__(self) -> int:
-        return self.replay_buffer.n_steps
+        return self.length
 
     def __getitem__(self, idx: int) -> dict[str, torch.Tensor]:
         ep_idx = self.replay_buffer["episode_index"][idx]

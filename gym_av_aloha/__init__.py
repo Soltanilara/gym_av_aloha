@@ -25,6 +25,14 @@ register(
 )
 
 register(
+    id="gym_av_aloha/color-cubes-v1",
+    entry_point=f"gym_av_aloha.env.tasks.color_cubes_env:ColorCubesEnv",
+    # Even after seeding, the rendered observations are slightly different,
+    # so we set `nondeterministic=True` to pass `check_env` tests
+    nondeterministic=True,
+)
+
+register(
     id="gym_av_aloha/thread-needle-v1",
     entry_point=f"gym_av_aloha.env.tasks.thread_needle_env:ThreadNeedleEnv",
     # Even after seeding, the rendered observations are slightly different,

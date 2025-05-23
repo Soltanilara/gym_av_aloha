@@ -16,6 +16,7 @@ from gym_av_aloha.env.sim_config import (
     LEFT_ACTUATOR_NAMES, LEFT_GRIPPER_ACTUATOR_NAME,
     RIGHT_ACTUATOR_NAMES, RIGHT_GRIPPER_ACTUATOR_NAME,
     MIDDLE_ACTUATOR_NAMES,
+    LEFT_EEF_SITE, RIGHT_EEF_SITE, MIDDLE_EEF_SITE,
     LIGHT_NAME, MIDDLE_BASE_LINK,
 )
 from gym_av_aloha.env.robot import SimRobotArm
@@ -37,7 +38,6 @@ class AVAlohaEnv(gym.Env):
         cameras=CAMERAS,
         render_camera=RENDER_CAMERA,
         enable_av=True,
-        max_episode_steps=400,
     ):
 
         super().__init__()
@@ -45,7 +45,6 @@ class AVAlohaEnv(gym.Env):
         self.cameras = cameras.copy()
         self.render_camera = render_camera
         self.enable_av = enable_av
-        self.max_episode_steps = max_episode_steps
 
         # If AV is disabled, remove AV-related cameras
         if not self.enable_av:
@@ -89,26 +88,32 @@ class AVAlohaEnv(gym.Env):
         self.left_gripper_actuator = self.mjcf_root.find('actuator', LEFT_GRIPPER_ACTUATOR_NAME)
         self.right_actuators = [self.mjcf_root.find('actuator', name) for name in RIGHT_ACTUATOR_NAMES]
         self.right_gripper_actuator = self.mjcf_root.find('actuator', RIGHT_GRIPPER_ACTUATOR_NAME)
+        self.left_eef_site = self.mjcf_root.find('site', LEFT_EEF_SITE)
+        self.right_eef_site = self.mjcf_root.find('site', RIGHT_EEF_SITE)
 
         # Initialize middle arm components only if AV is enabled
         if self.enable_av:
             self.middle_joints = [self.mjcf_root.find('joint', name) for name in MIDDLE_JOINT_NAMES]
             self.middle_actuators = [self.mjcf_root.find('actuator', name) for name in MIDDLE_ACTUATOR_NAMES]
+            self.middle_eef_site = self.mjcf_root.find('site', MIDDLE_EEF_SITE)
             self.middle_arm = SimRobotArm(
                 physics=self.physics,
                 joints=self.middle_joints,
                 actuators=self.middle_actuators,
+                eef_site=self.middle_eef_site,
                 has_gripper=False,
             )
         else:
             self.middle_joints = None
             self.middle_actuators = None
+            self.middle_eef_site = None
             self.middle_arm = None
 
         self.left_arm = SimRobotArm(
             physics=self.physics,
             joints=self.left_joints,
             actuators=self.left_actuators,
+            eef_site=self.left_eef_site,
             has_gripper=True,
             gripper_joints=self.left_gripper_joints,
             gripper_actuator=self.left_gripper_actuator,
@@ -118,6 +123,7 @@ class AVAlohaEnv(gym.Env):
             physics=self.physics,
             joints=self.right_joints,
             actuators=self.right_actuators,
+            eef_site=self.right_eef_site,
             has_gripper=True,
             gripper_joints=self.right_gripper_joints,
             gripper_actuator=self.right_gripper_actuator,
@@ -252,7 +258,7 @@ class AVAlohaEnv(gym.Env):
         terminated = reward == self.max_reward
     
         self.step_count += 1
-        truncated = self.step_count >= self.max_episode_steps
+        truncated = False
         info = {"is_success": reward == self.max_reward}
 
         return observation, reward, terminated, truncated, info

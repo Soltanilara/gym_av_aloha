@@ -16,3 +16,5 @@ Gym environment for AV-ALOHA simulation experiments.
 # Data Collection
 
 pip install git+https://github.com/huggingface/lerobot.git@bed90e3a41c43758c619dba66158ddd5798d361a
+
+pip install git+https://github.com/ian-chuang/aiortc.git@91cdb627b2510dba80786f9236277f103617c87a

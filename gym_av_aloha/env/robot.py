@@ -59,6 +59,12 @@ class SimRobotArm(RobotArm):
     
     def get_eef_rotation(self):
         return self.physics.bind(self.eef_site).xmat.reshape(3, 3).copy()
+    
+    def get_eef_pose(self):
+        eef_pose = np.eye(4)
+        eef_pose[:3, :3] = self.get_eef_rotation()
+        eef_pose[:3, 3] = self.get_eef_position()
+        return eef_pose
 
     def get_joint_positions(self):
         return self.physics.bind(self.joints).qpos.copy()

@@ -40,6 +40,12 @@ class PegInsertionEnv(AVAlohaEnv):
             self.physics.bind(self.hole_joint).qpos,
         ])
         return obs
+    
+    def set_state(self, state, environment_state):
+        super().set_state(state, environment_state)
+        self.physics.bind(self.peg_joint).qpos = environment_state[:7]
+        self.physics.bind(self.hole_joint).qpos = environment_state[7:14]
+        self.physics.forward()
 
     def get_reward(self):
         touch_left_gripper = False

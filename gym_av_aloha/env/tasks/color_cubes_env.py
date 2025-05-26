@@ -12,7 +12,7 @@ class ColorCubesEnv(AVAlohaEnv):
     RIGHT_POSE = [0, -0.082, 1.06, 0, -0.953, 0]
     RIGHT_GRIPPER_POSE = 1
     MIDDLE_POSE = [0, -0.6, 0.5, 0, 0.5, 0, 0]
-    ENV_STATE_DIM = 7
+    ENV_STATE_DIM = 21
     PROMPTS = [
         "pick red cube",
         "pick blue cube",
@@ -56,18 +56,12 @@ class ColorCubesEnv(AVAlohaEnv):
             self.physics.bind(self.yellow_cube_joint).qpos,
         ])
         return obs
-
-    def set_qpos(self, qpos, limit=True):
-        valid_idx = np.arange(len(self.physics.data.qpos))
-
-        # find the qpos idx of distractors + adverse joints 4*7 in total
-        remove_objects = [self.distractor1_joint, self.distractor2_joint, self.distractor3_joint]
-        for obj in remove_objects:
-            bad_idx = np.arange(self.physics.bind(obj).qposadr, self.physics.bind(obj).qposadr + 7)
-            # remove the bad idx from valid idx
-            valid_idx = np.setdiff1d(valid_idx, bad_idx)
-
-        self.physics.data.qpos[valid_idx] = qpos
+    
+    def set_state(self, state, environment_state):
+        super().set_state(state, environment_state)
+        self.physics.bind(self.red_cube_joint).qpos = environment_state[:7]
+        self.physics.bind(self.blue_cube_joint).qpos = environment_state[7:14]
+        self.physics.bind(self.yellow_cube_joint).qpos = environment_state[14:21]
         self.physics.forward()
 
     def get_reward(self):
@@ -121,7 +115,7 @@ class ColorCubesEnv(AVAlohaEnv):
         super().reset(seed=seed, options=options)
 
         use_distractors = options and options.get('distractors', False)
-        self.prompt = options.get('prompt', self.prompt)
+        self.prompt = options and options.get('prompt', self.prompt)
 
         # reset physics
         scale=2.5

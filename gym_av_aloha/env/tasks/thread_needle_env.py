@@ -51,17 +51,10 @@ class ThreadNeedleEnv(AVAlohaEnv):
         ])
         return obs
 
-    def set_qpos(self, qpos, limit=True):
-        valid_idx = np.arange(len(self.physics.data.qpos))
-
-        # find the qpos idx of distractors + adverse joints 4*7 in total
-        remove_objects = [self.distractor1_joint, self.distractor2_joint, self.distractor3_joint, self.adverse_joint]
-        for obj in remove_objects:
-            bad_idx = np.arange(self.physics.bind(obj).qposadr, self.physics.bind(obj).qposadr + 7)
-            # remove the bad idx from valid idx
-            valid_idx = np.setdiff1d(valid_idx, bad_idx)
-
-        self.physics.data.qpos[valid_idx] = qpos
+    def set_state(self, state, environment_state):
+        super().set_state(state, environment_state)
+        self.physics.bind(self.needle_joint).qpos = environment_state[:7]
+        self.physics.bind(self.wall_joint).qpos = environment_state[7:14]
         self.physics.forward()
 
     def reset(self, seed=None, options=None) -> tuple:

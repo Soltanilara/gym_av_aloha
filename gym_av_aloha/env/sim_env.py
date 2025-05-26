@@ -45,6 +45,7 @@ class AVAlohaEnv(gym.Env):
         self.cameras = cameras.copy()
         self.render_camera = render_camera
         self.enable_av = enable_av
+        self.prompt=""
 
         # If AV is disabled, remove AV-related cameras
         if not self.enable_av:
@@ -197,12 +198,24 @@ class AVAlohaEnv(gym.Env):
             }
 
         return obs
+    
+    def set_prompt(self, prompt: str):
+        self.prompt = prompt
 
     def get_qpos(self):
         return self.physics.data.qpos.copy()
 
     def set_qpos(self, qpos):
         self.physics.data.qpos[:] = qpos
+        self.physics.forward()
+
+    def set_state(self, state, environment_state):
+        self.left_arm.set_joint_positions(state[:6])
+        self.left_arm.set_gripper_position(state[6])
+        self.right_arm.set_joint_positions(state[7:13])
+        self.right_arm.set_gripper_position(state[13])
+        if self.enable_av:
+            self.middle_arm.set_joint_positions(state[14:21])
         self.physics.forward()
 
     def get_ctrl(self):

@@ -115,7 +115,9 @@ class ColorCubesEnv(AVAlohaEnv):
         super().reset(seed=seed, options=options)
 
         use_distractors = options and options.get('distractors', False)
-        self.prompt = options and options.get('prompt', self.prompt)
+
+        if options:
+            self.prompt = options.get('prompt', self.prompt)
 
         # reset physics
         scale=2.5
@@ -215,7 +217,7 @@ def main():
         time_until_next_step = SIM_DT - (time.time() - step_start)
         time.sleep(max(0, time_until_next_step))
 
-        if i % 10 == 0:
+        if i % 1000 == 0:
             env.reset(seed=42, options=options_list[j % len(options_list)])
             j += 1
 

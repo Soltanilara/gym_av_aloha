@@ -4,20 +4,20 @@
 
         <body name="red_cube" pos="0 0 0">
             <joint name="red_cube_joint" type="free" />
-            <geom  pos="0 0 0.02" size="0.015 0.015 0.015" type="box" name="red_cube" rgba=".8 .1 .4 1" solref="0.01 1"/>
+            <geom  pos="0 0 0.02" size="0.015 0.015 0.015" type="box" name="red_cube" rgba="1 0 0 1" solref="0.01 1"/>
         </body>
         <body name="blue_cube" pos="0.1 0 0">
             <joint name="blue_cube_joint" type="free" />
-            <geom  pos="0 0 0.02" size="0.015 0.015 0.015" type="box" name="blue_cube" rgba=".1 .5 .9 1" solref="0.01 1"/>
+            <geom  pos="0 0 0.02" size="0.015 0.015 0.015" type="box" name="blue_cube" rgba="0 0 1 1" solref="0.01 1"/>
         </body>
         <body name="yellow_cube" pos="-.1 0 0">
             <joint name="yellow_cube_joint" type="free" />
-            <geom  pos="0 0 0.02" size="0.015 0.015 0.015" type="box" name="yellow_cube" rgba="1 .7 0.02 1" solref="0.01 1"/>
+            <geom  pos="0 0 0.02" size="0.015 0.015 0.015" type="box" name="yellow_cube" rgba="1 1 0.02 1" solref="0.01 1"/>
         </body>
 
         <body name="distractor1" pos="0 0 -1">
             <joint name="distractor1_joint" type="free" damping="1e8"/>
-            <geom  pos="0 0 0.01" size="0.015 0.015 0.01" type="box" name="distractor1" rgba="0 1 0 1" />
+            <geom  pos="0 0 0.01" size="0.015 0.015 0.01" type="box" name="distractor1" rgba="0 1 0.3 1" />
         </body>
 
         <body name="distractor2" pos="0 0 -1">

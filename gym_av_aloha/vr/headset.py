@@ -286,11 +286,11 @@ class WebRTCHeadset:
 
         # create peer connection
         self.pc = RTCPeerConnection(
-            configuration=RTCConfiguration(await filter_ice_servers([
+            configuration=RTCConfiguration([
                 RTCIceServer("stun:stun1.l.google.com:19302"),
                 RTCIceServer("stun:stun2.l.google.com:19302"),
                 # RTCIceServer(self.turn_server_url, self.turn_server_username, self.turn_server_password),
-            ]))
+            ])
         )
 
         # create data channel
@@ -360,11 +360,11 @@ class WebRTCHeadset:
 
         # create new peer connection
         self.pc = RTCPeerConnection(
-            configuration=RTCConfiguration(await filter_ice_servers([
+            configuration=RTCConfiguration([
                 RTCIceServer("stun:stun1.l.google.com:19302"),
                 RTCIceServer("stun:stun2.l.google.com:19302"),
                 # RTCIceServer(self.turn_server_url, self.turn_server_username, self.turn_server_password),
-            ]))
+            ])
         )
 
         # run offer again

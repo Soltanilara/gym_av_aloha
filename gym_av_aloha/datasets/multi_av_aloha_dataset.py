@@ -4,7 +4,6 @@ from typing import Callable
 import datasets
 import torch
 import torch.utils
-from lerobot.common.constants import HF_LEROBOT_HOME
 from lerobot.common.datasets.compute_stats import aggregate_stats
 from lerobot.common.datasets.video_utils import VideoFrame
 from gym_av_aloha.datasets.av_aloha_dataset import AVAlohaDataset, ROOT

@@ -59,3 +59,8 @@ imageio.mimwrite(
     images,
     fps=dataset.fps,
 )
+
+
+dataloader = DataLoader(dataset, batch_size=32, shuffle=True)
+batch = next(iter(dataloader))
+print(batch['task'])

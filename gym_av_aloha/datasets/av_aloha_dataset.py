@@ -1,9 +1,10 @@
 import datasets
 import torch
-from os import path
+from pathlib import Path
+import os
 import numpy as np
 from typing import Callable
-
+import json
 import gym_av_aloha
 from gym_av_aloha.common.replay_buffer import ReplayBuffer
 from lerobot.common.datasets.lerobot_dataset import LeRobotDatasetMetadata
@@ -15,65 +16,75 @@ from lerobot.common.datasets.utils import (
     get_hf_features_from_features,
 )
 
-ROOT = path.dirname(path.dirname(gym_av_aloha.__file__))
-print(f"Loading AVAlohaImageDataset zarr from {ROOT}")
+ROOT = Path(os.path.dirname(os.path.dirname(gym_av_aloha.__file__))) / "outputs"
 
-def get_ds_meta_from_zarr(zarr_path: str = None, repo_id: str = None, root: str = ROOT) -> LeRobotDatasetMetadata:
-    if zarr_path is None:
-        assert repo_id is not None, "Either `repo_id` or `zarr_path` must be provided."
-        zarr_path = path.join(root, "outputs", repo_id)
-    replay_buffer = ReplayBuffer.copy_from_path(zarr_path)
-    meta_repo_id = str(np.array(replay_buffer.meta['repo_id']))
+def get_ds_meta(
+    repo_id: str | None = None,
+    root: str | Path | None = None,
+) -> LeRobotDatasetMetadata:
+    root = Path(root) if root else ROOT / repo_id
+    config_path = root / "config.json"
+    if config_path.exists():
+        with open(config_path, 'r') as f:
+            config = json.load(f)
+        meta_repo_id = config.get('repo_id', repo_id)
+    else:
+        # legacy
+        replay_buffer = ReplayBuffer.copy_from_path(str(root))
+        meta_repo_id = str(np.array(replay_buffer.meta['repo_id']))
     return LeRobotDatasetMetadata(meta_repo_id)
 
-
-class AVAlohaImageDataset(torch.utils.data.Dataset):
+class AVAlohaDataset(torch.utils.data.Dataset):
     def __init__(self,
                  repo_id: str | None = None,
-                 root: str | None = ROOT,
-                 zarr_path: str | None = None,
+                 root: str | Path | None = None,
                  episodes: list[int] | None = None,
                  image_transforms: Callable | None = None,
                  delta_timestamps: dict[list[float]] | None = None,
                  tolerance_s: float = 1e-4,
                  ):
         super().__init__()
-        if zarr_path is None:
-            assert repo_id is not None, "Either `repo_id` or `zarr_path` must be provided."
-            zarr_path = path.join(root, "outputs", repo_id)
-        self.zarr_path = zarr_path
+
+        self.repo_id = repo_id
+        self.root = Path(root) if root else ROOT / repo_id
+        self.episodes = episodes
+        self.image_transforms = image_transforms
         self.delta_timestamps = delta_timestamps
         self.tolerance_s = tolerance_s
         self.episodes = episodes
 
-        self.replay_buffer = ReplayBuffer.copy_from_path(self.zarr_path)
-        meta_repo_id = str(np.array(self.replay_buffer.meta['repo_id']))
-        if meta_repo_id != repo_id: print("[AVAlohaImageDataset] Warning: repo_id mismatch, using metadata from zarr.")
-        self.meta = LeRobotDatasetMetadata(meta_repo_id)
+        # create zarr dataset + lerobot metadata
+        self.replay_buffer = ReplayBuffer.copy_from_path(self.root)
+        self.meta = get_ds_meta(
+            repo_id=self.repo_id,
+            root=self.root
+        )
 
-        self.image_transforms = image_transforms
+        # if no episodes are specified, use all episodes in the replay buffer
+        if self.episodes is None: 
+            self.episodes = list(range(self.meta.total_episodes))
 
-        self.episode_data_index = get_episode_data_index({
-            i: {
-                'episode_index': i,
-                'length': length
-            }
-            for i, length in enumerate(self.replay_buffer.episode_lengths)
-        }, self.episodes)
+        # calculate length of the dataset
+        self.length = sum([self.replay_buffer.episode_lengths[i] for i in self.episodes])
 
-        if self.episodes is not None:
-            self.length = sum([self.replay_buffer.episode_lengths[i] for i in episodes])
-        else:
-            self.length = self.replay_buffer.n_steps
+        # add task index to delta timestamps
+        if 'task_index' in self.meta.features:
+            self.delta_timestamps['task_index'] = [0]  
+
+        {i: {'episode_index': i,'length': length} for i, length in enumerate(self.replay_buffer.episode_lengths)}
+
+        # from and to indices for episodes
+        self.episode_data_index = get_episode_data_index(self.meta.episodes)
+
+        # create valid indices for the dataset
+        self.valid_indices = np.concatenate([
+            np.arange(self.episode_data_index["from"][ep], self.episode_data_index["to"][ep])
+            for ep in self.episodes
+        ])
 
         # Check timestamps
         timestamps = np.array(self.replay_buffer['timestamp'])
         episode_indices = np.array(self.replay_buffer['episode_index'])
-        # keep only timestamps and episode_indices for the selected episodes
-        if self.episodes is not None:
-            mask = np.isin(episode_indices, self.episodes)
-            timestamps = timestamps[mask]
-            episode_indices = episode_indices[mask]
         ep_data_index_np = {k: t.numpy() for k, t in self.episode_data_index.items()}
         check_timestamps_sync(timestamps, episode_indices, ep_data_index_np, self.fps, self.tolerance_s)
 
@@ -122,7 +133,7 @@ class AVAlohaImageDataset(torch.utils.data.Dataset):
     @property
     def num_frames(self) -> int:
         """Number of frames in selected episodes."""
-        return self.meta.total_frames
+        return self.length
 
     @property
     def num_episodes(self):
@@ -137,13 +148,14 @@ class AVAlohaImageDataset(torch.utils.data.Dataset):
         return self.meta.image_keys
 
     def __len__(self) -> int:
-        return self.length
+        return self.num_frames
 
     def __getitem__(self, idx: int) -> dict[str, torch.Tensor]:
-        ep_idx = self.replay_buffer["episode_index"][idx]
+        global_idx = self.valid_indices[idx]
+        ep_idx = self.replay_buffer["episode_index"][global_idx]
         item = {"episode_index": torch.tensor(ep_idx)}
 
-        query_indices, padding = self._get_query_indices(idx, ep_idx)
+        query_indices, padding = self._get_query_indices(global_idx, ep_idx)
         query_result = self._query_replay_buffer(query_indices)
         item = {**item, **padding}
         for key, val in query_result.items():
@@ -156,5 +168,10 @@ class AVAlohaImageDataset(torch.utils.data.Dataset):
             image_keys = self.meta.camera_keys
             for cam in image_keys:
                 item[cam] = self.image_transforms(item[cam])
+
+        # Add task as a string
+        if "task_index" in item:
+            task_idx = item["task_index"].item()
+            item["task"] = self.meta.tasks[task_idx]
 
         return item

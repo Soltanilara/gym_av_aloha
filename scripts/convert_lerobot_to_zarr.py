@@ -8,6 +8,7 @@ from torchvision.transforms import Resize
 import torch
 import os
 from tqdm import tqdm
+import json
 
 def main(args):
     repo_id = args.repo_id
@@ -19,9 +20,12 @@ def main(args):
     replay_buffer = ReplayBuffer.create_from_path(zarr_path=zarr_path, mode="a")
 
     ds_meta = LeRobotDatasetMetadata(repo_id)
-    replay_buffer.update_meta({
+    config = {
         "repo_id": ds_meta.repo_id,
-    })
+    }
+    replay_buffer.update_meta(config)
+    with open(os.path.join(zarr_path, "config.json"), 'w') as f:
+        json.dump(config, f, indent=4)
 
     def convert(k, v: torch.Tensor, ds_meta: LeRobotDatasetMetadata):
         dtype = ds_meta.features[k]['dtype']
@@ -48,11 +52,6 @@ def main(args):
         if key.startswith("observation.images") and key not in valid_keys:
             del features[key]
             print(f"Removed {key} from features because it is not an AV image.")
-
-    for key in features:
-        print(f"Converting {key}...")
-        if features[key]['dtype'] == 'image':
-            print(f"Image shape: {features[key]['shape']}")
 
     dataset = LeRobotDataset(repo_id)
     # iterate through dataset
@@ -92,9 +91,10 @@ if __name__ == "__main__":
     parser.add_argument("--av_images_only", action='store_true', help="Only convert AV images.")
 
     """"
-    python scripts/convert_lerobot_to_zarr.py --repo_id iantc104/av_aloha_sim_thread_needle --av_images_only --image_size 160 208 --rename iantc104/av_aloha_sim_thread_needle_160x208
+    python scripts/convert_lerobot_to_zarr.py --repo_id iantc104/av_aloha_sim_thread_needle --av_images_only --image_size 240 320 --rename iantc104/av_aloha_sim_thread_needle_240x320
     python scripts/convert_lerobot_to_zarr.py --repo_id lerobot/pusht_keypoints
     python scripts/convert_lerobot_to_zarr.py --repo_id lerobot/pusht --image_size 96 96
+    python scripts/convert_lerobot_to_zarr.py --repo_id iantc104/av_aloha_sim_peg_insertion_v0 --av_images_only --image_size 240 320 --rename iantc104/av_aloha_sim_peg_insertion_240x320
     """
 
     args = parser.parse_args()

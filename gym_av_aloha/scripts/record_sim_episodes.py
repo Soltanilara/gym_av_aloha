@@ -193,6 +193,9 @@ def collect_data(args):
         },
     )
     if env.prompts:
+        if len(env.prompts) == 1:
+            task = env.prompts[0]
+            print(colored(f"Using default task: '{task}'", 'green'))
         assert task in env.prompts, \
             f"Task '{task}' is not in the list of available tasks: {env.prompts}. Please choose a valid task."
 

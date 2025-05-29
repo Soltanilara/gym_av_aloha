@@ -13,6 +13,9 @@ class PegInsertionEnv(AVAlohaEnv):
     RIGHT_GRIPPER_POSE = 1
     MIDDLE_POSE = [0, -0.6, 0.5, 0, 0.5, 0, 0]
     ENV_STATE_DIM = 14
+    PROMPTS = [
+        "insert peg into socket"
+    ]
 
     def __init__(
         self,

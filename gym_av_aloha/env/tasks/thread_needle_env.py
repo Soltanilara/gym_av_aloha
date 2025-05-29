@@ -13,6 +13,9 @@ class ThreadNeedleEnv(AVAlohaEnv):
     RIGHT_GRIPPER_POSE = 1
     MIDDLE_POSE = [0, -0.6, 0.5, 0, 0.5, 0, 0]
     ENV_STATE_DIM = 14
+    PROMPTS = [
+        "thread needle through wall"
+    ]
 
     def __init__(
         self,

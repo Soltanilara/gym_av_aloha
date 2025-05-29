@@ -105,9 +105,7 @@ class TeleopEnv():
 
     @property
     def prompts(self):
-        if hasattr(self.env, 'PROMPTS'):
-            return self.env.PROMPTS
-        return None
+        return self.env.PROMPTS
     
     @property
     def max_reward(self):

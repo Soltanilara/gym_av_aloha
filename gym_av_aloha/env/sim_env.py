@@ -31,6 +31,7 @@ class AVAlohaEnv(gym.Env):
     RIGHT_POSE = [0, -0.082, 1.06, 0, -0.953, 0]
     RIGHT_GRIPPER_POSE = 1
     MIDDLE_POSE = [0, -0.6, 0.5, 0, 0.5, 0, 0]
+    PROMPTS = []
 
     def __init__(
         self,
@@ -45,7 +46,6 @@ class AVAlohaEnv(gym.Env):
         self.cameras = cameras.copy()
         self.render_camera = render_camera
         self.enable_av = enable_av
-        self.prompt=""
 
         # If AV is disabled, remove AV-related cameras
         if not self.enable_av:
@@ -167,6 +167,11 @@ class AVAlohaEnv(gym.Env):
 
         self.action_space = spaces.Box(low=-np.inf, high=np.inf, shape=(action_dim,), dtype=np.float64)
 
+        if len(self.PROMPTS) > 0:
+            self.prompt = self.PROMPTS[0]
+        else:
+            self.prompt = None
+
     def get_obs(self) -> np.ndarray:
         obs = {}
 
@@ -200,6 +205,8 @@ class AVAlohaEnv(gym.Env):
         return obs
     
     def set_prompt(self, prompt: str):
+        if self.PROMPTS:
+            assert prompt in self.PROMPTS, f"Prompt must be one of {self.PROMPTS}"
         self.prompt = prompt
 
     def get_qpos(self):
@@ -306,6 +313,9 @@ class AVAlohaEnv(gym.Env):
             self.randomize_light()
         else:
             self.reset_light()
+
+        if options:
+            self.set_prompt(options.get('prompt', self.prompt))
 
         self.left_arm.set_joint_positions(self.LEFT_POSE)
         self.left_arm.set_gripper_position(self.LEFT_GRIPPER_POSE)

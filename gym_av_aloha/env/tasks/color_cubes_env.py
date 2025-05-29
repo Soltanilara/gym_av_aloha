@@ -46,8 +46,6 @@ class ColorCubesEnv(AVAlohaEnv):
         )
         self.observation_space = spaces.Dict(self.observation_space_dict)
 
-        self.prompt = self.PROMPTS[0]
-
     def get_obs(self) -> np.ndarray:
         obs = super().get_obs()
         obs['environment_state'] = np.concatenate([
@@ -115,9 +113,6 @@ class ColorCubesEnv(AVAlohaEnv):
         super().reset(seed=seed, options=options)
 
         use_distractors = options and options.get('distractors', False)
-
-        if options:
-            self.prompt = options.get('prompt', self.prompt)
 
         # reset physics
         scale=2.5
@@ -197,7 +192,7 @@ def main():
 
     options_list = [
         # {"randomize_light": True},
-        {"distractors": True},
+        {"distractors": True, "prompt": "pick blue cube"},
         {}
     ]
 

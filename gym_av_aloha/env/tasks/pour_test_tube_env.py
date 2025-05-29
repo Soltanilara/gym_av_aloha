@@ -13,6 +13,9 @@ class PourTestTubeEnv(AVAlohaEnv):
     RIGHT_GRIPPER_POSE = 1
     MIDDLE_POSE = [0, -0.6, 0.5, 0, 0.5, 0, 0]
     ENV_STATE_DIM = 21
+    PROMPTS = [
+        "pour ball into test tube"
+    ]
 
     def __init__(
         self,

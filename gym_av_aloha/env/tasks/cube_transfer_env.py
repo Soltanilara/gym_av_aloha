@@ -14,7 +14,7 @@ class CubeTransferEnv(AVAlohaEnv):
     MIDDLE_POSE = [0, -0.6, 0.5, 0, 0.5, 0, 0]
     ENV_STATE_DIM = 7
     PROMPTS = [
-        "pick cube"
+        "pick red cube"
     ]
 
     def __init__(

@@ -4,6 +4,7 @@ from tqdm import tqdm
 from gym_av_aloha.datasets.av_aloha_dataset import AVAlohaDataset
 from gym_av_aloha.datasets.multi_av_aloha_dataset import MultiAVAlohaDataset
 import imageio
+from lerobot.common.datasets.sampler import EpisodeAwareSampler
 
 # PUSHT AVALOHADataset
 
@@ -34,6 +35,27 @@ imageio.mimwrite(
     fps=dataset.meta.fps,
 )
 
+# AVAlohaDataset Sampler Test
+sampler = EpisodeAwareSampler(
+    dataset.episode_data_index,
+    drop_n_last_frames=30,
+    shuffle=False,
+)
+dataloader = DataLoader(
+    dataset,
+    batch_size=32,
+    shuffle=False,
+    sampler=sampler,
+)
+images = []
+for batch in tqdm(dataloader):
+    images.extend((batch["observation.image"].squeeze(1).permute(0, 2, 3, 1).numpy() * 255.0).astype("uint8"))
+imageio.mimwrite(
+    "pusht_drop30.mp4",
+    images,
+    fps=dataset.meta.fps,
+)
+
 # MultiAVAlohaDataset
 delta_timestamps = {
     "observation.images.zed_cam_left": [0],
@@ -60,7 +82,32 @@ imageio.mimwrite(
     fps=dataset.fps,
 )
 
+# Task test
 
 dataloader = DataLoader(dataset, batch_size=32, shuffle=True)
 batch = next(iter(dataloader))
 print(batch['task'])
+
+
+# Test MultiAVAlohaDataset with sampler
+
+sampler = EpisodeAwareSampler(
+    dataset.episode_data_index,
+    drop_n_last_frames=100,
+    shuffle=False,
+)
+dataloader = DataLoader(
+    dataset,
+    batch_size=32,
+    shuffle=False,
+    sampler=sampler,
+)
+images = []
+for batch in tqdm(dataloader):
+    images.extend((batch["observation.images.zed_cam_left"].squeeze(1).permute(0, 2, 3, 1).numpy() * 255.0).astype("uint8"))
+# save mp4
+imageio.mimwrite(
+    "avaloha_drop100.mp4",
+    images,
+    fps=dataset.fps,
+)

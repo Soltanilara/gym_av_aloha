@@ -145,21 +145,20 @@ class AVAlohaDataset(torch.utils.data.Dataset):
         if 'task_index' in self.meta.features:
             self.delta_timestamps['task_index'] = [0]  
 
-        {i: {'episode_index': i,'length': length} for i, length in enumerate(self.replay_buffer.episode_lengths)}
-
         # from and to indices for episodes
-        self.episode_data_index = get_episode_data_index(self.meta.episodes)
+        self.replay_buffer_data_index = get_episode_data_index(self.meta.episodes)
+        self.episode_data_index = get_episode_data_index(self.meta.episodes, self.episodes)
 
         # create valid indices for the dataset
         self.valid_indices = np.concatenate([
-            np.arange(self.episode_data_index["from"][ep], self.episode_data_index["to"][ep])
+            np.arange(self.replay_buffer_data_index["from"][ep], self.replay_buffer_data_index["to"][ep])
             for ep in self.episodes
         ])
 
         # Check timestamps
         timestamps = np.array(self.replay_buffer['timestamp'])
         episode_indices = np.array(self.replay_buffer['episode_index'])
-        ep_data_index_np = {k: t.numpy() for k, t in self.episode_data_index.items()}
+        ep_data_index_np = {k: t.numpy() for k, t in self.replay_buffer_data_index.items()}
         check_timestamps_sync(timestamps, episode_indices, ep_data_index_np, self.fps, self.tolerance_s)
 
         if self.delta_timestamps is not None:
@@ -167,8 +166,8 @@ class AVAlohaDataset(torch.utils.data.Dataset):
             self.delta_indices = get_delta_indices(self.delta_timestamps, self.fps)
 
     def _get_query_indices(self, idx: int, ep_idx: int) -> tuple[dict[str, list[int | bool]]]:
-        ep_start = self.episode_data_index["from"][ep_idx]
-        ep_end = self.episode_data_index["to"][ep_idx]
+        ep_start = self.replay_buffer_data_index["from"][ep_idx]
+        ep_end = self.replay_buffer_data_index["to"][ep_idx]
         query_indices = {
             key: [max(ep_start.item(), min(ep_end.item() - 1, idx + delta)) for delta in delta_idx]
             for key, delta_idx in self.delta_indices.items()

@@ -102,34 +102,34 @@ class MultiAVAlohaDataset(torch.utils.data.Dataset):
         return self._datasets[0].meta.info.get("video", False)
 
     @property
-    def features(self) -> datasets.Features:
+    def hf_features(self) -> datasets.Features:
         features = {}
         for dataset in self._datasets:
             features.update({k: v for k, v in dataset.hf_features.items() if k not in self.disabled_features})
+        return features
+    
+    @property
+    def features(self) -> dict:
+        features = {}
+        for dataset in self._datasets:
+            features.update({k: v for k, v in dataset.features.items() if k not in self.disabled_features})
         return features
 
     @property
     def camera_keys(self) -> list[str]:
         """Keys to access image and video stream from cameras."""
-        keys = []
-        for key, feats in self.features.items():
-            if isinstance(feats, (datasets.Image, VideoFrame)):
-                keys.append(key)
-        return keys
+        keys = set([])
+        for dataset in self._datasets:
+            keys.update(dataset.meta.camera_keys)
+        return list(keys)
 
     @property
-    def video_frame_keys(self) -> list[str]:
-        """Keys to access video frames that requires to be decoded into images.
-
-        Note: It is empty if the dataset contains images only,
-        or equal to `self.cameras` if the dataset contains videos only,
-        or can even be a subset of `self.cameras` in a case of a mixed image/video dataset.
-        """
-        video_frame_keys = []
-        for key, feats in self.features.items():
-            if isinstance(feats, VideoFrame):
-                video_frame_keys.append(key)
-        return video_frame_keys
+    def video_keys(self) -> list[str]:
+        """Keys to access video frames from cameras."""
+        keys = set([])
+        for dataset in self._datasets:
+            keys.update(dataset.meta.video_keys)
+        return list(keys)
 
     @property
     def num_frames(self) -> int:
@@ -149,6 +149,21 @@ class MultiAVAlohaDataset(torch.utils.data.Dataset):
         """
         # 1e-4 to account for possible numerical error
         return 1 / self.fps - 1e-4
+    
+    @property
+    def episode_data_index(self) -> dict:
+        """A dictionary mapping episode indices to the start and end frame indices of each episode."""
+        from_idx = []
+        to_idx = []
+        start_idx = 0
+        for dataset in self._datasets:
+            from_idx.extend(dataset.episode_data_index["from"] + start_idx)
+            to_idx.extend(dataset.episode_data_index["to"] + start_idx)
+            start_idx += dataset.num_frames
+        return {
+            "from": torch.tensor(from_idx),
+            "to": torch.tensor(to_idx),
+        }
 
     def __len__(self):
         return self.num_frames

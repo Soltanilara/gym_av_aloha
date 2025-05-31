@@ -532,7 +532,7 @@ class Headset():
 
 if __name__ == "__main__":
     try:
-        headset = Headset()
+        headset = WebRTCHeadset()
         headset.run_in_thread()
 
         count = 0 

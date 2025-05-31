@@ -2,7 +2,7 @@ import numpy as np
 import torch
 
 import gym_av_aloha
-from gym_av_aloha.vr.headset import Headset
+from gym_av_aloha.vr.headset import Headset, WebRTCHeadset
 from gym_av_aloha.vr.headset_control import HeadsetControl
 from gym_av_aloha.vr.headset_utils import HeadsetFeedback, HeadsetData
 from gym_av_aloha.utils.dataset_utils import interpolate_data
@@ -182,7 +182,7 @@ def collect_data(args):
     root = args["root"]
     task = args["task"]
 
-    headset = Headset()
+    headset = WebRTCHeadset()
     headset.run_in_thread()
     
     env = TeleopEnv(

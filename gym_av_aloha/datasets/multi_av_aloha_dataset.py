@@ -4,6 +4,7 @@ from typing import Callable
 import datasets
 import torch
 import torch.utils
+import numpy as np
 from lerobot.common.datasets.compute_stats import aggregate_stats
 from lerobot.common.datasets.video_utils import VideoFrame
 from gym_av_aloha.datasets.av_aloha_dataset import AVAlohaDataset, ROOT
@@ -160,10 +161,19 @@ class MultiAVAlohaDataset(torch.utils.data.Dataset):
             from_idx.extend(dataset.episode_data_index["from"] + start_idx)
             to_idx.extend(dataset.episode_data_index["to"] + start_idx)
             start_idx += dataset.num_frames
-        return {
+
+        episode_data_index = {
             "from": torch.tensor(from_idx),
             "to": torch.tensor(to_idx),
         }
+        valid_indices = np.concatenate([
+            np.arange(episode_data_index["from"][ep], episode_data_index["to"][ep])
+            for ep in range(len(episode_data_index["from"]))
+        ])
+        assert len(valid_indices) == self.num_frames, 'Length of valid indices does not match length of dataset.'
+        assert len(set(valid_indices)) == len(valid_indices), 'Valid indices contain duplicates.'
+        return episode_data_index
+
 
     def __len__(self):
         return self.num_frames

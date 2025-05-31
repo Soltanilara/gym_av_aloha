@@ -154,6 +154,8 @@ class AVAlohaDataset(torch.utils.data.Dataset):
             np.arange(self.replay_buffer_data_index["from"][ep], self.replay_buffer_data_index["to"][ep])
             for ep in self.episodes
         ])
+        assert len(self.valid_indices) == self.length, 'Length of valid indices does not match length of dataset.'
+        assert len(set(self.valid_indices)) == len(self.valid_indices), 'Valid indices contain duplicates.'
 
         # Check timestamps
         timestamps = np.array(self.replay_buffer['timestamp'])

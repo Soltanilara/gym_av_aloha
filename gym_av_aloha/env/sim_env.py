@@ -359,6 +359,8 @@ class AVAlohaEnv(gym.Env):
         if self.viewer is not None:
             self.viewer.close()
             self.viewer = None
+        if hasattr(self, "physics"):
+            del self.physics
 
 
 def main():

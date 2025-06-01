@@ -38,7 +38,7 @@ imageio.mimwrite(
 # AVAlohaDataset Sampler Test
 sampler = EpisodeAwareSampler(
     dataset.episode_data_index,
-    drop_n_last_frames=30,
+    drop_n_last_frames=100,
     shuffle=False,
 )
 dataloader = DataLoader(

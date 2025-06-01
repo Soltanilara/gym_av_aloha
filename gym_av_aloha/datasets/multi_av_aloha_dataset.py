@@ -9,6 +9,8 @@ from lerobot.common.datasets.compute_stats import aggregate_stats
 from lerobot.common.datasets.video_utils import VideoFrame
 from gym_av_aloha.datasets.av_aloha_dataset import AVAlohaDataset, ROOT
 
+# BROKEN AND SUCKS
+
 class MultiAVAlohaDataset(torch.utils.data.Dataset):
     """A dataset consisting of multiple underlying `LeRobotDataset`s.
 

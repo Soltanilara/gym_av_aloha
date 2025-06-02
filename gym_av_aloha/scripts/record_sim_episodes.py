@@ -128,8 +128,8 @@ def run_episode(env: TeleopEnv, headset: Headset, task, episode_idx):
         # send feedback to the headset
         feedback.info = f"Episode {episode_idx}, Step: {str(step_idx).zfill(5)}"
         headset.send_feedback(feedback)
-        headset.send_left_image(ts['pixels']['zed_cam_left'], 0)
-        headset.send_right_image(ts['pixels']['zed_cam_right'], 0)
+        headset.send_left_image(ts['pixels']['zed_cam_left'], step_idx)
+        headset.send_right_image(ts['pixels']['zed_cam_right'], step_idx)
 
         # Rudimentary time keeping
         time.sleep(max(0, SIM_DT - (time.time() - start_time)))

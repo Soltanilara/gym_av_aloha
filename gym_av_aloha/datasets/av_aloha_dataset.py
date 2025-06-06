@@ -56,12 +56,6 @@ def create_av_aloha_dataset_from_lerobot(
     print(
         f"Disabled features: {disabled_features}.\n"
     )
-    # calc total stats
-    episodes_stats = []
-    for dataset in datasets:
-        for ep_idx in dataset.episodes:
-            episodes_stats.append(dataset.meta.episodes_stats[ep_idx])
-    stats = aggregate_stats(episodes_stats)
     # fps
     fps = datasets[0].meta.fps
     assert all(dataset.meta.fps == fps for dataset in datasets), "Datasets have different fps values."
@@ -72,22 +66,30 @@ def create_av_aloha_dataset_from_lerobot(
     # features
     features = {}
     for dataset in datasets:
-        features.update({k: v for k, v in dataset.features.items() if k not in disabled_features})
+        features.update({k: v for k, v in dataset.features.items()})
+    features = {k: v for k, v in features.items() if k not in disabled_features}
+    features = {k: v for k, v in features.items() if k not in remove_keys}
     # camera keys
     camera_keys = set([])
     for dataset in datasets:
         camera_keys.update(dataset.meta.camera_keys)
-    camera_keys = list(camera_keys)
+    camera_keys = [k for k in camera_keys if k in features]
     # video keys
     video_keys = set([])
     for dataset in datasets:
         video_keys.update(dataset.meta.video_keys)
-    video_keys = list(video_keys)
+    video_keys = [k for k in video_keys if k in features]
     # image keys
     image_keys = set([])
     for dataset in datasets:
         image_keys.update(dataset.meta.image_keys)
-    image_keys = list(image_keys)
+    image_keys = [k for k in image_keys if k in features]
+    # stats
+    episodes_stats = []
+    for dataset in datasets:
+        for ep_idx in dataset.episodes:
+            episodes_stats.append({k: v for k, v in dataset.meta.episodes_stats[ep_idx].items() if k in features})
+    stats = aggregate_stats(episodes_stats)
     # tasks
     tasks = []
     for ds in datasets:
@@ -103,13 +105,12 @@ def create_av_aloha_dataset_from_lerobot(
     # create new replay buffer
     replay_buffer = ReplayBuffer.create_from_path(zarr_path=root, mode="a")
     # metadata
-    new_features = {k: v for k, v in features.items() if k not in remove_keys}
     config = {
         "repo_id": dataset.repo_id,
         "stats": stats,
         "num_frames": num_frames,
         "num_episodes": num_episodes,
-        "features": new_features,
+        "features": features,
         "camera_keys": camera_keys,
         "video_keys": video_keys,
         "image_keys": image_keys,
@@ -121,7 +122,7 @@ def create_av_aloha_dataset_from_lerobot(
     with open(config_path, "wb") as f:
         pickle.dump(config, f)
     def convert(k, v: torch.Tensor):
-        dtype = new_features[k]['dtype']
+        dtype = features[k]['dtype']
         if dtype in ['image', 'video']:
             if image_size is not None:
                 v = Resize(image_size)(v)
@@ -152,7 +153,7 @@ def create_av_aloha_dataset_from_lerobot(
             # since batch is a dict go through keys and cat them into a batch
             batch = {k: torch.cat([d[k] for d in data], dim=0) for k in data[0].keys()}
             assert batch['action'].shape[0] == to_idx - from_idx, f"Batch size does not match episode length. Expected {to_idx - from_idx}, got {batch['action'].shape[0]}."
-            batch = {k:convert(k,v) for k,v in batch.items() if k in new_features}
+            batch = {k:convert(k,v) for k,v in batch.items() if k in features}
             replay_buffer.add_episode(batch, compressors='disk')
             print(f"Episode {episode_idx} converted and added to replay buffer.")
             episode_idx += 1

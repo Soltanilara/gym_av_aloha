@@ -87,7 +87,8 @@ def create_av_aloha_dataset_from_lerobot(
     # stats
     episodes_stats = []
     for dataset in datasets:
-        for ep_idx in dataset.episodes:
+        ep = dataset.episodes if dataset.episodes else range(dataset.num_episodes)
+        for ep_idx in ep:
             episodes_stats.append({k: v for k, v in dataset.meta.episodes_stats[ep_idx].items() if k in features})
     stats = aggregate_stats(episodes_stats)
     # tasks
@@ -193,7 +194,7 @@ class AVAlohaDataset(torch.utils.data.Dataset):
         self.config = get_dataset_config(repo_id=self.repo_id, root=self.root)
 
         # if no episodes are specified, use all episodes in the replay buffer
-        if self.episodes is None: 
+        if not self.episodes: 
             self.episodes = list(range(self.config['num_episodes']))
 
         # calculate length of the dataset

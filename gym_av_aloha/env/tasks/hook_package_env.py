@@ -11,8 +11,11 @@ class HookPackageEnv(AVAlohaEnv):
     LEFT_GRIPPER_POSE = 1
     RIGHT_POSE = [0, -0.082, 1.06, 0, -0.953, 0]
     RIGHT_GRIPPER_POSE = 1
-    MIDDLE_POSE = [0, -0.8, 0.8, 0, 0.5, 0, 0]
+    MIDDLE_POSE = [0, -0.6, 0.5, 0, 0.5, 0, 0]
     ENV_STATE_DIM = 14
+    PROMPTS = [
+        "hook package"
+    ]
 
     def __init__(
         self,
@@ -40,6 +43,12 @@ class HookPackageEnv(AVAlohaEnv):
             self.physics.bind(self.hook_joint).qpos,
         ])
         return obs
+    
+    def set_state(self, state, environment_state):
+        super().set_state(state, environment_state)
+        self.physics.bind(self.package_joint).qpos = environment_state[:7]
+        self.physics.bind(self.hook_joint).qpos = environment_state[7:14]
+        self.physics.forward()
 
     def reset(self, seed=None, options=None):
         super().reset(seed=seed, options=options)

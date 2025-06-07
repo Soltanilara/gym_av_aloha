@@ -13,6 +13,9 @@ class PegInsertionEnv(AVAlohaEnv):
     RIGHT_GRIPPER_POSE = 1
     MIDDLE_POSE = [0, -0.6, 0.5, 0, 0.5, 0, 0]
     ENV_STATE_DIM = 14
+    PROMPTS = [
+        "insert peg into socket"
+    ]
 
     def __init__(
         self,
@@ -40,6 +43,12 @@ class PegInsertionEnv(AVAlohaEnv):
             self.physics.bind(self.hole_joint).qpos,
         ])
         return obs
+    
+    def set_state(self, state, environment_state):
+        super().set_state(state, environment_state)
+        self.physics.bind(self.peg_joint).qpos = environment_state[:7]
+        self.physics.bind(self.hole_joint).qpos = environment_state[7:14]
+        self.physics.forward()
 
     def get_reward(self):
         touch_left_gripper = False

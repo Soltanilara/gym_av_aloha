@@ -33,6 +33,7 @@ class SimRobotArm(RobotArm):
         physics,
         joints,
         actuators,
+        eef_site,
         has_gripper=False,
         gripper_joints=None,
         gripper_actuator=None,
@@ -40,6 +41,7 @@ class SimRobotArm(RobotArm):
         self.physics = physics
         self.joints = joints
         self.actuators = actuators
+        self.eef_site = eef_site
         self.has_gripper = has_gripper
         self.gripper_joints = gripper_joints
         self.gripper_actuator = gripper_actuator
@@ -51,6 +53,18 @@ class SimRobotArm(RobotArm):
             self.gripper_range = self.physics.bind(self.gripper_actuator).ctrlrange
             self.gripper_norm_fn = lambda x: (x - self.gripper_range[0]) / (self.gripper_range[1] - self.gripper_range[0])
             self.gripper_unnorm_fn = lambda x: x * (self.gripper_range[1] - self.gripper_range[0]) + self.gripper_range[0]
+
+    def get_eef_position(self):
+        return self.physics.bind(self.eef_site).xpos.copy()
+    
+    def get_eef_rotation(self):
+        return self.physics.bind(self.eef_site).xmat.reshape(3, 3).copy()
+    
+    def get_eef_pose(self):
+        eef_pose = np.eye(4)
+        eef_pose[:3, :3] = self.get_eef_rotation()
+        eef_pose[:3, 3] = self.get_eef_position()
+        return eef_pose
 
     def get_joint_positions(self):
         return self.physics.bind(self.joints).qpos.copy()

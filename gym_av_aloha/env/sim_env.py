@@ -16,6 +16,7 @@ from gym_av_aloha.env.sim_config import (
     LEFT_ACTUATOR_NAMES, LEFT_GRIPPER_ACTUATOR_NAME,
     RIGHT_ACTUATOR_NAMES, RIGHT_GRIPPER_ACTUATOR_NAME,
     MIDDLE_ACTUATOR_NAMES,
+    LEFT_EEF_SITE, RIGHT_EEF_SITE, MIDDLE_EEF_SITE,
     LIGHT_NAME, MIDDLE_BASE_LINK,
 )
 from gym_av_aloha.env.robot import SimRobotArm
@@ -30,6 +31,7 @@ class AVAlohaEnv(gym.Env):
     RIGHT_POSE = [0, -0.082, 1.06, 0, -0.953, 0]
     RIGHT_GRIPPER_POSE = 1
     MIDDLE_POSE = [0, -0.6, 0.5, 0, 0.5, 0, 0]
+    PROMPTS = []
 
     def __init__(
         self,
@@ -37,7 +39,6 @@ class AVAlohaEnv(gym.Env):
         cameras=CAMERAS,
         render_camera=RENDER_CAMERA,
         enable_av=True,
-        max_episode_steps=400,
     ):
 
         super().__init__()
@@ -45,7 +46,6 @@ class AVAlohaEnv(gym.Env):
         self.cameras = cameras.copy()
         self.render_camera = render_camera
         self.enable_av = enable_av
-        self.max_episode_steps = max_episode_steps
 
         # If AV is disabled, remove AV-related cameras
         if not self.enable_av:
@@ -89,26 +89,32 @@ class AVAlohaEnv(gym.Env):
         self.left_gripper_actuator = self.mjcf_root.find('actuator', LEFT_GRIPPER_ACTUATOR_NAME)
         self.right_actuators = [self.mjcf_root.find('actuator', name) for name in RIGHT_ACTUATOR_NAMES]
         self.right_gripper_actuator = self.mjcf_root.find('actuator', RIGHT_GRIPPER_ACTUATOR_NAME)
+        self.left_eef_site = self.mjcf_root.find('site', LEFT_EEF_SITE)
+        self.right_eef_site = self.mjcf_root.find('site', RIGHT_EEF_SITE)
 
         # Initialize middle arm components only if AV is enabled
         if self.enable_av:
             self.middle_joints = [self.mjcf_root.find('joint', name) for name in MIDDLE_JOINT_NAMES]
             self.middle_actuators = [self.mjcf_root.find('actuator', name) for name in MIDDLE_ACTUATOR_NAMES]
+            self.middle_eef_site = self.mjcf_root.find('site', MIDDLE_EEF_SITE)
             self.middle_arm = SimRobotArm(
                 physics=self.physics,
                 joints=self.middle_joints,
                 actuators=self.middle_actuators,
+                eef_site=self.middle_eef_site,
                 has_gripper=False,
             )
         else:
             self.middle_joints = None
             self.middle_actuators = None
+            self.middle_eef_site = None
             self.middle_arm = None
 
         self.left_arm = SimRobotArm(
             physics=self.physics,
             joints=self.left_joints,
             actuators=self.left_actuators,
+            eef_site=self.left_eef_site,
             has_gripper=True,
             gripper_joints=self.left_gripper_joints,
             gripper_actuator=self.left_gripper_actuator,
@@ -118,6 +124,7 @@ class AVAlohaEnv(gym.Env):
             physics=self.physics,
             joints=self.right_joints,
             actuators=self.right_actuators,
+            eef_site=self.right_eef_site,
             has_gripper=True,
             gripper_joints=self.right_gripper_joints,
             gripper_actuator=self.right_gripper_actuator,
@@ -160,6 +167,11 @@ class AVAlohaEnv(gym.Env):
 
         self.action_space = spaces.Box(low=-np.inf, high=np.inf, shape=(action_dim,), dtype=np.float64)
 
+        if len(self.PROMPTS) > 0:
+            self.prompt = self.PROMPTS[0]
+        else:
+            self.prompt = None
+
     def get_obs(self) -> np.ndarray:
         obs = {}
 
@@ -191,12 +203,26 @@ class AVAlohaEnv(gym.Env):
             }
 
         return obs
+    
+    def set_prompt(self, prompt: str):
+        if self.PROMPTS:
+            assert prompt in self.PROMPTS, f"Prompt must be one of {self.PROMPTS}"
+        self.prompt = prompt
 
     def get_qpos(self):
         return self.physics.data.qpos.copy()
 
     def set_qpos(self, qpos):
         self.physics.data.qpos[:] = qpos
+        self.physics.forward()
+
+    def set_state(self, state, environment_state):
+        self.left_arm.set_joint_positions(state[:6])
+        self.left_arm.set_gripper_position(state[6])
+        self.right_arm.set_joint_positions(state[7:13])
+        self.right_arm.set_gripper_position(state[13])
+        if self.enable_av:
+            self.middle_arm.set_joint_positions(state[14:21])
         self.physics.forward()
 
     def get_ctrl(self):
@@ -252,7 +278,7 @@ class AVAlohaEnv(gym.Env):
         terminated = reward == self.max_reward
     
         self.step_count += 1
-        truncated = self.step_count >= self.max_episode_steps
+        truncated = False
         info = {"is_success": reward == self.max_reward}
 
         return observation, reward, terminated, truncated, info
@@ -287,6 +313,9 @@ class AVAlohaEnv(gym.Env):
             self.randomize_light()
         else:
             self.reset_light()
+
+        if options:
+            self.set_prompt(options.get('prompt', self.prompt))
 
         self.left_arm.set_joint_positions(self.LEFT_POSE)
         self.left_arm.set_gripper_position(self.LEFT_GRIPPER_POSE)
@@ -330,6 +359,8 @@ class AVAlohaEnv(gym.Env):
         if self.viewer is not None:
             self.viewer.close()
             self.viewer = None
+        if hasattr(self, "physics"):
+            del self.physics
 
 
 def main():

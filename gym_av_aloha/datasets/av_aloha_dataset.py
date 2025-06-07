@@ -1,9 +1,8 @@
-import datasets
 import torch
-from os import path
+from pathlib import Path
+import os
 import numpy as np
 from typing import Callable
-
 import gym_av_aloha
 from gym_av_aloha.common.replay_buffer import ReplayBuffer
 from lerobot.common.datasets.lerobot_dataset import LeRobotDatasetMetadata
@@ -12,59 +11,203 @@ from lerobot.common.datasets.utils import (
     get_delta_indices,
     get_episode_data_index,
     check_timestamps_sync,
-    get_hf_features_from_features,
 )
+from lerobot.common.datasets.lerobot_dataset import (
+    LeRobotDataset,
+    LeRobotDatasetMetadata,
+)
+from torch.utils.data import DataLoader, Subset
+from torchvision.transforms import Resize
+from tqdm import tqdm
+from lerobot.common.datasets.compute_stats import aggregate_stats
+import shutil
+import pickle
 
-ROOT = path.dirname(path.dirname(gym_av_aloha.__file__))
-print(f"Loading AVAlohaImageDataset zarr from {ROOT}")
+ROOT = Path(os.path.dirname(os.path.dirname(gym_av_aloha.__file__))) / "outputs"
 
-def get_ds_meta_from_zarr(zarr_path: str = None, repo_id: str = None, root: str = ROOT) -> LeRobotDatasetMetadata:
-    if zarr_path is None:
-        assert repo_id is not None, "Either `repo_id` or `zarr_path` must be provided."
-        zarr_path = path.join(root, "outputs", repo_id)
-    replay_buffer = ReplayBuffer.copy_from_path(zarr_path)
-    meta_repo_id = str(np.array(replay_buffer.meta['repo_id']))
-    return LeRobotDatasetMetadata(meta_repo_id)
+def create_av_aloha_dataset_from_lerobot(
+    episodes: dict[str, list[int]] | None = None,
+    repo_id: str | None = None,
+    root: str | Path | None = None,
+    image_size: tuple[int, int] | None = None,
+    remove_keys: list[str] = [],
+):
+    root = Path(root) if root else ROOT / repo_id
+    # create lerobot datasets
+    datasets = [LeRobotDataset(repo_id=repo_id, episodes=episodes) for repo_id, episodes in episodes.items()]
+    # Disable any data keys that are not common across all of the datasets.
+    disabled_features = set()
+    intersection_features = set(datasets[0].features)
+    for ds in datasets:
+        intersection_features.intersection_update(ds.features)
+    if len(intersection_features) == 0:
+        raise RuntimeError(
+            "Multiple datasets were provided but they had no keys common to all of them. "
+            "The multi-dataset functionality currently only keeps common keys."
+        )
+    for ds in datasets:
+        extra_keys = set(ds.features).difference(intersection_features)
+        if len(extra_keys) > 0:
+            print(
+                f"keys {extra_keys} of {ds.repo_id} were disabled as they are not contained in all the "
+                "other datasets."
+            )
+        disabled_features.update(extra_keys)
+    print(
+        f"Disabled features: {disabled_features}.\n"
+    )
+    # fps
+    fps = datasets[0].meta.fps
+    assert all(dataset.meta.fps == fps for dataset in datasets), "Datasets have different fps values."
+    # num frames
+    num_frames = sum(d.num_frames for d in datasets)
+    # num episodes
+    num_episodes = sum(d.num_episodes for d in datasets)
+    # features
+    features = {}
+    for dataset in datasets:
+        features.update({k: v for k, v in dataset.features.items()})
+    features = {k: v for k, v in features.items() if k not in disabled_features}
+    features = {k: v for k, v in features.items() if k not in remove_keys}
+    # camera keys
+    camera_keys = set([])
+    for dataset in datasets:
+        camera_keys.update(dataset.meta.camera_keys)
+    camera_keys = [k for k in camera_keys if k in features]
+    # video keys
+    video_keys = set([])
+    for dataset in datasets:
+        video_keys.update(dataset.meta.video_keys)
+    video_keys = [k for k in video_keys if k in features]
+    # image keys
+    image_keys = set([])
+    for dataset in datasets:
+        image_keys.update(dataset.meta.image_keys)
+    image_keys = [k for k in image_keys if k in features]
+    # stats
+    episodes_stats = []
+    for dataset in datasets:
+        for ep_idx in dataset.episodes:
+            episodes_stats.append({k: v for k, v in dataset.meta.episodes_stats[ep_idx].items() if k in features})
+    stats = aggregate_stats(episodes_stats)
+    # tasks
+    tasks = []
+    for ds in datasets:
+        tasks.extend(ds.meta.tasks.values())
+    tasks = {i: task for i, task in enumerate(tasks)}
+    tasks_reversed = {v: k for k, v in tasks.items()}
 
+    # remove old replay buffer if it exists
+    if root.exists():
+        print(f"Removing existing directory {root}...")
+        shutil.rmtree(root)
 
-class AVAlohaImageDataset(torch.utils.data.Dataset):
+    # create new replay buffer
+    replay_buffer = ReplayBuffer.create_from_path(zarr_path=root, mode="a")
+    # metadata
+    config = {
+        "repo_id": dataset.repo_id,
+        "stats": stats,
+        "num_frames": num_frames,
+        "num_episodes": num_episodes,
+        "features": features,
+        "camera_keys": camera_keys,
+        "video_keys": video_keys,
+        "image_keys": image_keys,
+        "fps": fps,
+        "tasks": tasks,
+        "image_size": image_size,
+    }
+    config_path = root / "config.pkl"
+    with open(config_path, "wb") as f:
+        pickle.dump(config, f)
+    def convert(k, v: torch.Tensor):
+        dtype = features[k]['dtype']
+        if dtype in ['image', 'video']:
+            if image_size is not None:
+                v = Resize(image_size)(v)
+            # (B, C, H, W) to (B, H, W, C)
+            v = v.permute(0, 2, 3, 1)
+            # convert from torch float32 to numpy uint8
+            v = (v * 255).to(torch.uint8).numpy()
+        else:
+            v = v.numpy()
+        return v
+        
+    # iterate through dataset
+    episode_idx = 0
+    for dataset in datasets:
+        for i in range(dataset.num_episodes):
+            print(f"Converting episode {episode_idx}...")
+            from_idx = dataset.episode_data_index['from'][i]
+            to_idx = dataset.episode_data_index['to'][i]
+            subset = Subset(dataset, range(from_idx, to_idx))
+            dataloader = DataLoader(subset, batch_size=16, shuffle=False, num_workers=8)
+            data = []
+            for batch in tqdm(dataloader):
+                if 'task_index' in batch:
+                    batch['task_index'] = torch.tensor([tasks_reversed[k] for k in batch['task']], dtype=int)
+                    del batch["task"]
+                batch['episode_index'] = torch.full_like(batch['episode_index'], episode_idx)
+                data.append(batch)
+            # since batch is a dict go through keys and cat them into a batch
+            batch = {k: torch.cat([d[k] for d in data], dim=0) for k in data[0].keys()}
+            assert batch['action'].shape[0] == to_idx - from_idx, f"Batch size does not match episode length. Expected {to_idx - from_idx}, got {batch['action'].shape[0]}."
+            batch = {k:convert(k,v) for k,v in batch.items() if k in features}
+            replay_buffer.add_episode(batch, compressors='disk')
+            print(f"Episode {episode_idx} converted and added to replay buffer.")
+            episode_idx += 1
+    print(f"Converted dataset saved to {root}.")
+
+def get_dataset_config(
+    repo_id: str | None = None,
+    root: str | Path | None = None,
+) -> LeRobotDatasetMetadata:
+    root = Path(root) if root else ROOT / repo_id
+    config_path = root / "config.pkl"
+    with open(config_path, "rb") as f:
+        config = pickle.load(f)
+    return config
+
+class AVAlohaDataset(torch.utils.data.Dataset):
     def __init__(self,
                  repo_id: str | None = None,
-                 root: str | None = ROOT,
-                 zarr_path: str | None = None,
+                 root: str | Path | None = None,
                  episodes: list[int] | None = None,
                  image_transforms: Callable | None = None,
                  delta_timestamps: dict[list[float]] | None = None,
                  tolerance_s: float = 1e-4,
                  ):
         super().__init__()
-        if zarr_path is None:
-            assert repo_id is not None, "Either `repo_id` or `zarr_path` must be provided."
-            zarr_path = path.join(root, "outputs", repo_id)
-        self.zarr_path = zarr_path
+
+        self.repo_id = repo_id
+        self.root = Path(root) if root else ROOT / repo_id
+        self.episodes = episodes
+        self.image_transforms = image_transforms
         self.delta_timestamps = delta_timestamps
         self.tolerance_s = tolerance_s
         self.episodes = episodes
 
-        self.replay_buffer = ReplayBuffer.copy_from_path(self.zarr_path)
-        meta_repo_id = str(np.array(self.replay_buffer.meta['repo_id']))
-        if meta_repo_id != repo_id: print("[AVAlohaImageDataset] Warning: repo_id mismatch, using metadata from zarr.")
-        self.meta = LeRobotDatasetMetadata(meta_repo_id)
+        # create zarr dataset + lerobot metadata
+        self.replay_buffer = ReplayBuffer.copy_from_path(self.root)
+        self.config = get_dataset_config(repo_id=self.repo_id, root=self.root)
 
-        self.image_transforms = image_transforms
+        # if no episodes are specified, use all episodes in the replay buffer
+        if self.episodes is None: 
+            self.episodes = list(range(self.config['num_episodes']))
 
+        # calculate length of the dataset
+        self.length = sum([self.replay_buffer.episode_lengths[i] for i in self.episodes])
+
+        # add task index to delta timestamps
+        if 'task_index' in self.features:
+            self.delta_timestamps['task_index'] = [0]  
+
+        # from and to indices for episodes
         self.episode_data_index = get_episode_data_index({
-            i: {
-                'episode_index': i,
-                'length': length
-            }
+            i: {'length': length}
             for i, length in enumerate(self.replay_buffer.episode_lengths)
         }, self.episodes)
-
-        if self.episodes is not None:
-            self.length = sum([self.replay_buffer.episode_lengths[i] for i in episodes])
-        else:
-            self.length = self.replay_buffer.n_steps
 
         # Check timestamps
         timestamps = np.array(self.replay_buffer['timestamp'])
@@ -104,40 +247,42 @@ class AVAlohaImageDataset(torch.utils.data.Dataset):
 
     @property
     def stats(self):
-        return self.meta.stats
+        return self.config['stats']
 
     @property
     def features(self):
-        return self.meta.features
+        return self.config['features']
 
     @property
-    def hf_features(self) -> datasets.Features:
-        """Features of the hf_dataset."""
-        return get_hf_features_from_features(self.features)
-
-    @property
-    def fps(self):
-        return self.meta.fps
+    def fps(self) -> float:
+        return self.config['fps']
 
     @property
     def num_frames(self) -> int:
-        """Number of frames in selected episodes."""
-        return self.meta.total_frames
+        return self.length
 
     @property
-    def num_episodes(self):
-        return len(self.episodes) if self.episodes is not None else self.meta.total_episodes
+    def num_episodes(self) -> int:
+        return len(self.episodes)
 
     @property
     def video_keys(self):
-        return self.meta.video_keys
+        return self.config["video_keys"]
 
     @property
     def image_keys(self):
-        return self.meta.image_keys
+        return self.config["image_keys"]
+
+    @property
+    def camera_keys(self):
+        return self.config["camera_keys"]
+    
+    @property
+    def tasks(self):
+        return self.config["tasks"]
 
     def __len__(self) -> int:
-        return self.length
+        return self.num_frames
 
     def __getitem__(self, idx: int) -> dict[str, torch.Tensor]:
         ep_idx = self.replay_buffer["episode_index"][idx]
@@ -153,8 +298,13 @@ class AVAlohaImageDataset(torch.utils.data.Dataset):
                 item[key] = torch.from_numpy(val)
 
         if self.image_transforms is not None:
-            image_keys = self.meta.camera_keys
+            image_keys = self.camera_keys
             for cam in image_keys:
                 item[cam] = self.image_transforms(item[cam])
+
+        # Add task as a string
+        if "task_index" in item:
+            task_idx = item["task_index"].item()
+            item["task"] = self.tasks[task_idx]
 
         return item

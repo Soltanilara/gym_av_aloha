@@ -13,6 +13,9 @@ class CubeTransferEnv(AVAlohaEnv):
     RIGHT_GRIPPER_POSE = 1
     MIDDLE_POSE = [0, -0.6, 0.5, 0, 0.5, 0, 0]
     ENV_STATE_DIM = 7
+    PROMPTS = [
+        "pick red cube"
+    ]
 
     def __init__(
         self,
@@ -46,17 +49,9 @@ class CubeTransferEnv(AVAlohaEnv):
         obs['environment_state'] = self.physics.bind(self.cube_joint).qpos
         return obs
 
-    def set_qpos(self, qpos, limit=True):
-        valid_idx = np.arange(len(self.physics.data.qpos))
-
-        # find the qpos idx of distractors + adverse joints 4*7 in total
-        remove_objects = [self.distractor1_joint, self.distractor2_joint, self.distractor3_joint, self.adverse_joint]
-        for obj in remove_objects:
-            bad_idx = np.arange(self.physics.bind(obj).qposadr, self.physics.bind(obj).qposadr + 7)
-            # remove the bad idx from valid idx
-            valid_idx = np.setdiff1d(valid_idx, bad_idx)
-
-        self.physics.data.qpos[valid_idx] = qpos
+    def set_state(self, state, environment_state):
+        super().set_state(state, environment_state)
+        self.physics.bind(self.cube_joint).qpos = environment_state
         self.physics.forward()
 
     def get_reward(self):

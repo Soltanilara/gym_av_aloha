@@ -21,9 +21,22 @@ from torchvision.transforms import Resize
 from tqdm import tqdm
 from lerobot.common.datasets.compute_stats import aggregate_stats
 import shutil
-import pickle
+import json
 
 ROOT = Path(os.path.dirname(os.path.dirname(gym_av_aloha.__file__))) / "outputs"
+
+def make_json_serializable(obj):
+    """Convert an object to a JSON-serializable format."""
+    if isinstance(obj, (torch.Tensor, np.ndarray)):
+        return obj.tolist()
+    elif isinstance(obj, (list, tuple)):
+        return [make_json_serializable(item) for item in obj]
+    elif isinstance(obj, dict):
+        return {key: make_json_serializable(value) for key, value in obj.items()}
+    elif isinstance(obj, (int, float, str, bool, type(None))):
+        return obj
+    else:
+        raise TypeError(f"Object of type {type(obj)} is not JSON serializable")
 
 def create_av_aloha_dataset_from_lerobot(
     episodes: dict[str, list[int]] | None = None,
@@ -87,7 +100,8 @@ def create_av_aloha_dataset_from_lerobot(
     # stats
     episodes_stats = []
     for dataset in datasets:
-        for ep_idx in dataset.episodes:
+        ep = dataset.episodes if dataset.episodes else range(dataset.num_episodes)
+        for ep_idx in ep:
             episodes_stats.append({k: v for k, v in dataset.meta.episodes_stats[ep_idx].items() if k in features})
     stats = aggregate_stats(episodes_stats)
     # tasks
@@ -116,11 +130,11 @@ def create_av_aloha_dataset_from_lerobot(
         "image_keys": image_keys,
         "fps": fps,
         "tasks": tasks,
-        "image_size": image_size,
     }
-    config_path = root / "config.pkl"
-    with open(config_path, "wb") as f:
-        pickle.dump(config, f)
+    config_path = root / "config.json"
+    with open(config_path, "w") as f: 
+        json.dump(make_json_serializable(config), f, indent=4)
+        
     def convert(k, v: torch.Tensor):
         dtype = features[k]['dtype']
         if dtype in ['image', 'video']:
@@ -164,10 +178,58 @@ def get_dataset_config(
     root: str | Path | None = None,
 ) -> LeRobotDatasetMetadata:
     root = Path(root) if root else ROOT / repo_id
-    config_path = root / "config.pkl"
-    with open(config_path, "rb") as f:
-        config = pickle.load(f)
+    config_path = root / "config.json"
+    if not config_path.exists():
+        raise FileNotFoundError(f"Config file not found at {config_path}. Please create the dataset first.")
+    with open(config_path, "r") as f:
+        config = json.load(f)
     return config
+
+class AVAlohaDatasetMeta():
+    def __init__(self, repo_id: str | None = None, root: str | Path | None = None):
+        self.repo_id = repo_id
+        self.root = Path(root) if root else ROOT / repo_id
+        self.config = get_dataset_config(repo_id=self.repo_id, root=self.root)
+
+        # convert config['tasks'] keys to int, not string
+        if 'tasks' in self.config:
+            self.config['tasks'] = {int(k): v for k, v in self.config['tasks'].items()}
+
+    @property
+    def stats(self) -> dict:
+        return self.config['stats']
+    
+    @property
+    def num_frames(self) -> int:
+        return self.config['num_frames']
+    
+    @property
+    def num_episodes(self) -> int:
+        return self.config['num_episodes']
+    
+    @property
+    def features(self):
+        return self.config['features']
+    
+    @property
+    def camera_keys(self):
+        return self.config['camera_keys']
+    
+    @property
+    def video_keys(self):
+        return self.config['video_keys']
+    
+    @property
+    def image_keys(self):
+        return self.config['image_keys']
+    
+    @property
+    def fps(self) -> float:
+        return self.config['fps']
+    
+    @property
+    def tasks(self):
+        return self.config['tasks']
 
 class AVAlohaDataset(torch.utils.data.Dataset):
     def __init__(self,
@@ -190,11 +252,11 @@ class AVAlohaDataset(torch.utils.data.Dataset):
 
         # create zarr dataset + lerobot metadata
         self.replay_buffer = ReplayBuffer.copy_from_path(self.root)
-        self.config = get_dataset_config(repo_id=self.repo_id, root=self.root)
+        self.meta = AVAlohaDatasetMeta(repo_id=self.repo_id, root=self.root)
 
         # if no episodes are specified, use all episodes in the replay buffer
-        if self.episodes is None: 
-            self.episodes = list(range(self.config['num_episodes']))
+        if not self.episodes: 
+            self.episodes = list(range(self.meta.num_episodes))
 
         # calculate length of the dataset
         self.length = sum([self.replay_buffer.episode_lengths[i] for i in self.episodes])
@@ -247,39 +309,39 @@ class AVAlohaDataset(torch.utils.data.Dataset):
 
     @property
     def stats(self):
-        return self.config['stats']
+        return self.meta.stats
 
     @property
     def features(self):
-        return self.config['features']
+        return self.meta.features
 
     @property
     def fps(self) -> float:
-        return self.config['fps']
+        return self.meta.fps
 
     @property
     def num_frames(self) -> int:
-        return self.length
+        return self.meta.num_frames
 
     @property
     def num_episodes(self) -> int:
-        return len(self.episodes)
+        return self.meta.num_episodes
 
     @property
     def video_keys(self):
-        return self.config["video_keys"]
+        return self.meta.video_keys
 
     @property
     def image_keys(self):
-        return self.config["image_keys"]
+        return self.meta.image_keys
 
     @property
     def camera_keys(self):
-        return self.config["camera_keys"]
+        return self.meta.camera_keys
     
     @property
     def tasks(self):
-        return self.config["tasks"]
+        return self.meta.tasks
 
     def __len__(self) -> int:
         return self.num_frames

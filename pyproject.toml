@@ -7,8 +7,8 @@ readme = "README.md"
 
 [tool.poetry.dependencies]
 python = "^3.10"
-mujoco = "^3.2.2"
-dm-control = "^1.0.22"
+mujoco = "^3.3.3"
+dm-control = "^1.0.31"
 
 [build-system]
 requires = ["poetry-core"]

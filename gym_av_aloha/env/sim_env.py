@@ -38,6 +38,8 @@ class AVAlohaEnv(gym.Env):
         fps=25,
         cameras=CAMERAS,
         render_camera=RENDER_CAMERA,
+        render_height=240,
+        render_width=304,
         enable_av=True,
     ):
 
@@ -45,6 +47,8 @@ class AVAlohaEnv(gym.Env):
         self.fps = fps
         self.cameras = cameras.copy()
         self.render_camera = render_camera
+        self.render_height = render_height
+        self.render_width = render_width
         self.enable_av = enable_av
 
         # If AV is disabled, remove AV-related cameras
@@ -257,8 +261,8 @@ class AVAlohaEnv(gym.Env):
 
     def render(self):
         return self.physics.render(
-            height=240,
-            width=304,
+            height=self.render_height,
+            width=self.render_width,
             camera_id=self.render_camera
         )
 

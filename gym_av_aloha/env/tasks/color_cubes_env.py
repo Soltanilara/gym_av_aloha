@@ -212,7 +212,7 @@ def main():
         time_until_next_step = SIM_DT - (time.time() - step_start)
         time.sleep(max(0, time_until_next_step))
 
-        if i % 1000 == 0:
+        if i % 10 == 0:
             env.reset(seed=42, options=options_list[j % len(options_list)])
             j += 1
 

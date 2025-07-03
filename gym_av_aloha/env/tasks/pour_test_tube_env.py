@@ -29,6 +29,15 @@ class PourTestTubeEnv(AVAlohaEnv):
         self.tube1_joint = self.mjcf_root.find('joint', 'tube1_joint')
         self.tube2_joint = self.mjcf_root.find('joint', 'tube2_joint')
 
+        self.distractor1_geom = self.mjcf_root.find('geom', 'distractor1')
+        self.distractor2_geom = self.mjcf_root.find('geom', 'distractor2')
+        self.distractor3_geom = self.mjcf_root.find('geom', 'distractor3')
+        self.adverse_geom = self.mjcf_root.find('geom', 'adverse')
+        self.distractor1_joint = self.mjcf_root.find('joint', 'distractor1_joint')
+        self.distractor2_joint = self.mjcf_root.find('joint', 'distractor2_joint')
+        self.distractor3_joint = self.mjcf_root.find('joint', 'distractor3_joint')
+        self.adverse_joint = self.mjcf_root.find('joint', 'adverse_joint')
+
         self.observation_space_dict['environment_state'] = spaces.Box(
             low=-np.inf,
             high=np.inf,
@@ -76,6 +85,77 @@ class PourTestTubeEnv(AVAlohaEnv):
         self.physics.bind(self.ball_joint).qpos = np.concatenate([ball_position, ball_quat])
         self.physics.bind(self.tube1_joint).qpos = np.concatenate([tube1_position, tube1_quat])
         self.physics.bind(self.tube2_joint).qpos = np.concatenate([tube2_position, tube2_quat])
+
+        # reset distractors
+        distractor_geoms = [self.distractor1_geom, self.distractor2_geom, self.distractor3_geom, self.adverse_geom]
+        distractor_joints = [self.distractor1_joint, self.distractor2_joint, self.distractor3_joint, self.adverse_joint]
+        position = np.array([0.0, 0.0, -1.0])
+        quat = np.array([1, 0, 0, 0])
+        for geom, joint in zip(distractor_geoms, distractor_joints):
+            self.physics.bind(geom).contype = 0
+            self.physics.bind(geom).conaffinity = 0
+            self.physics.bind(joint).damping = 1e8
+            self.physics.bind(joint).qpos = np.concatenate([position, quat])
+
+        if (options and options.get('distractors', False)):
+            distractor_geoms = [self.distractor1_geom, self.distractor2_geom, self.distractor3_geom]
+            distractor_joints = [self.distractor1_joint, self.distractor2_joint, self.distractor3_joint]
+            for geom, joint in zip(distractor_geoms, distractor_joints):
+                self.physics.bind(geom).contype = 1
+                self.physics.bind(geom).conaffinity = 1
+                self.physics.bind(joint).damping = 0
+
+            # find random positions that are not too close to each other or cube
+            distractor_positions = []
+            min_distance = 0.08  # Minimum distance to maintain
+
+            x_range = [-.15, 0.15]
+            y_range = [-0.1, 0.1]
+            z_range = [0.0, 0.0]
+            ranges = np.vstack([x_range, y_range, z_range])
+
+            max_tries = 50
+            while len(distractor_positions) < len(distractor_geoms):
+                for i in range(max_tries):
+                    d_pos = np.random.uniform(ranges[:, 0], ranges[:, 1])
+                    if np.linalg.norm(d_pos - tube1_position) > min_distance and  \
+                        np.linalg.norm(d_pos - tube2_position) > min_distance and \
+                        all(np.linalg.norm(d_pos - dp) > min_distance for dp in distractor_positions):
+                        distractor_positions.append(d_pos)
+                        break
+                else:
+                    distractor_positions = []
+
+            random_quats = []
+            for _ in range(3):
+                yaw = np.random.uniform(0, 2 * np.pi)
+                quat = np.array([np.cos(yaw / 2), 0, 0, np.sin(yaw / 2)])
+                random_quats.append(quat)
+
+            # Assign positions to distractors
+            for i, joint in enumerate(distractor_joints):
+                self.physics.bind(joint).qpos = np.concatenate([distractor_positions[i], random_quats[i]])
+
+        if (options and options.get('adverse', False)):
+            self.physics.bind(self.adverse_geom).contype = 1
+            self.physics.bind(self.adverse_geom).conaffinity = 1
+            self.physics.bind(self.adverse_joint).damping = 0
+
+            x_range = [-.15, 0.15]
+            y_range = [-0.1, 0.1]
+            z_range = [0.0, 0.0]
+            ranges = np.vstack([x_range, y_range, z_range])
+
+            min_distance = 0.08  # Minimum distance to maintain
+            while True:
+                d_pos = np.random.uniform(ranges[:, 0], ranges[:, 1])
+                if np.linalg.norm(d_pos - tube1_position) > min_distance and  \
+                        np.linalg.norm(d_pos - tube2_position) > min_distance:
+                    adverse_position = d_pos
+                    yaw = np.random.uniform(0, 2 * np.pi)
+                    adverse_quat = np.array([np.cos(yaw / 2), 0, 0, np.sin(yaw / 2)])
+                    self.physics.bind(self.adverse_joint).qpos = np.concatenate([adverse_position, adverse_quat])
+                    break
 
         self.physics.forward()
 

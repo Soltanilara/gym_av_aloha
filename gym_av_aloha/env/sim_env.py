@@ -294,8 +294,8 @@ class AVAlohaEnv(gym.Env):
         ranges = np.vstack([x_range, y_range, z_range])
         self.physics.named.model.light_type[LIGHT_NAME] = mujoco.mjtLightType.mjLIGHT_SPOT
         self.physics.named.model.light_pos[LIGHT_NAME] = np.random.uniform(ranges[:, 0], ranges[:, 1])
-        self.physics.named.model.light_ambient[LIGHT_NAME] = np.random.uniform(0, 1.0, size=3)
-        self.physics.named.model.light_diffuse[LIGHT_NAME] = np.random.uniform(.1, 1.0, size=3)
+        self.physics.named.model.light_ambient[LIGHT_NAME] = np.random.uniform(0, 0.2, size=3)
+        self.physics.named.model.light_diffuse[LIGHT_NAME] = np.random.uniform(.5, 0.9, size=3)
 
     def reset_light(self):
         self.physics.named.model.light_type[LIGHT_NAME] = mujoco.mjtLightType.mjLIGHT_DIRECTIONAL

@@ -6,6 +6,15 @@ from gym_av_aloha.env.sim_config import SIM_DT
 import mujoco
 
 @jit(nopython=True, fastmath=True, cache=True)
+def fk_fn(theta, w0, v0, site0):
+    M = np.eye(4)
+    M[:,:] = site0
+    for i in prange(len(theta)-1, -1, -1):
+        T = exp2mat(w0[i], v0[i], theta[i])
+        M = np.dot(T, M)
+    return M
+
+@jit(nopython=True, fastmath=True, cache=True)
 def run_diff_ik(
     old_q, 
     target_pos, 
@@ -121,6 +130,14 @@ class DiffIK():
         self.site0 = np.eye(4)
         self.site0[:3, :3] = physics.bind(eef_site).xmat.reshape(3,3).copy()
         self.site0[:3, 3] = physics.bind(eef_site).xpos.copy()
+
+    def fk(self, q):
+        return fk_fn(
+            theta=q,
+            w0=self.w0,
+            v0=self.v0,
+            site0=self.site0,
+        )
 
     def run(self, q, target_pos, target_mat):
         return run_diff_ik(

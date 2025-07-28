@@ -39,7 +39,7 @@ def make_json_serializable(obj):
         raise TypeError(f"Object of type {type(obj)} is not JSON serializable")
 
 def create_av_aloha_dataset_from_lerobot(
-    episodes: dict[str, list[int]] | None = None,
+    datasets: list[LeRobotDataset],
     repo_id: str | None = None,
     root: str | Path | None = None,
     image_size: tuple[int, int] | None = None,
@@ -47,7 +47,7 @@ def create_av_aloha_dataset_from_lerobot(
 ):
     root = Path(root) if root else ROOT / repo_id
     # create lerobot datasets
-    datasets = [LeRobotDataset(repo_id=repo_id, episodes=episodes) for repo_id, episodes in episodes.items()]
+    # datasets = [LeRobotDataset(repo_id=repo_id, episodes=episodes) for repo_id, episodes in episodes.items()]
     # Disable any data keys that are not common across all of the datasets.
     disabled_features = set()
     intersection_features = set(datasets[0].features)

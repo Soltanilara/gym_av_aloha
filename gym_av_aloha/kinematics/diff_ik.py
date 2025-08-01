@@ -4,6 +4,7 @@ from gym_av_aloha.utils.transform_utils import wxyz_to_xyzw, quat2mat, angular_e
 from gym_av_aloha.env.sim_env import AVAlohaEnv
 from gym_av_aloha.env.sim_config import SIM_DT
 import mujoco
+from dataclasses import dataclass
 
 @jit(nopython=True, fastmath=True, cache=True)
 def fk_fn(theta, w0, v0, site0):
@@ -93,7 +94,8 @@ def run_diff_ik(
     new_q = old_q + joint_p * (q - old_q)
     
     return new_q
-    
+
+@dataclass
 class DiffIKConfig():
     k_pos=0.9
     k_ori=0.9

@@ -2,6 +2,7 @@ import numpy as np
 from numba import jit, prange
 from gym_av_aloha.utils.transform_utils import wxyz_to_xyzw, quat2mat, angular_error, within_pose_threshold, exp2mat
 import mujoco
+from dataclasses import dataclass
 
 @jit(nopython=True, fastmath=True, cache=True)
 def fk_fn(theta, w0, v0, site0):
@@ -132,6 +133,7 @@ def run_grad_ik(
 
     return new_q
 
+@dataclass
 class GradIKConfig:
     step_size = 0.0001
     min_cost_delta = 1.0e-12

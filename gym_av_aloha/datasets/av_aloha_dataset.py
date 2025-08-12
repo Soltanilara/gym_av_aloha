@@ -1,4 +1,5 @@
 import torch
+import logging
 from pathlib import Path
 import os
 import numpy as np
@@ -47,6 +48,8 @@ def create_av_aloha_dataset_from_lerobot(
 ):
     root = Path(root) if root else ROOT / repo_id
     # create lerobot datasets
+    #datasets = [LeRobotDataset(repo_id=repo_id, episodes=episodes, root=root) for repo_id, episodes in episodes.items()]
+
     datasets = [LeRobotDataset(repo_id=repo_id, episodes=episodes) for repo_id, episodes in episodes.items()]
     # Disable any data keys that are not common across all of the datasets.
     disabled_features = set()
@@ -179,8 +182,21 @@ def get_dataset_config(
 ) -> LeRobotDatasetMetadata:
     root = Path(root) if root else ROOT / repo_id
     config_path = root / "config.json"
+    logging.info(f"DEBUG (get_dataset_config): Full config_path being checked: '{config_path}'")
+    logging.info(f"DEBUG (get_dataset_config): Does config_path exist? {config_path.exists()}")
+    logging.info(f"DEBUG (get_dataset_config): Is config_path a file? {config_path.is_file()}")
+    logging.info(f"DEBUG (get_dataset_config): Is config_path a directory? {config_path.is_dir()}")
+
+  
     if not config_path.exists():
         raise FileNotFoundError(f"Config file not found at {config_path}. Please create the dataset first.")
+    try:
+        with open(config_path, 'r') as f:
+            test_content = f.read(100) # 尝试读取文件的前100个字符
+        logging.info(f"DEBUG (get_dataset_config): Successfully opened config.json. First 100 chars: '{test_content}'")
+    except Exception as e:
+        logging.error(f"DEBUG (get_dataset_config): Failed to open/read config.json: {e}")
+        raise # Re-raise the exception to see if it's the original FileNotFoundError or something else
     with open(config_path, "r") as f:
         config = json.load(f)
     return config

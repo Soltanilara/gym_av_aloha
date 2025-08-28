@@ -337,6 +337,7 @@ class ReplayBuffer:
     # ============= properties =================
     @cached_property
     def data(self):
+        
         return self.root['data']
     
     @cached_property
@@ -413,6 +414,7 @@ class ReplayBuffer:
         return self.data.items()
     
     def __getitem__(self, key):
+        #print("self.data[key]=",key)
         return self.data[key]
 
     def __contains__(self, key):

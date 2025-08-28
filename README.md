@@ -66,3 +66,12 @@ python record_sim_episodes.py \
     --root outputs \
     --task "hook package"
 ```
+
+python record_sim_episodes.py \
+    --env_name hook-package-v1 \
+    --num-episodes 100 \
+    --repo-id jinyu220/sim_test \
+    --root outputs \
+    --task "hook package"
+
+    python record_sim_episodes.py   --env_name hook-package-v1 --num-episodes 100  --repo-id jinyu220/sim_test  --root outputs  --task "hook package"

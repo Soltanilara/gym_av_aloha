@@ -64,6 +64,7 @@ def main():
         episodes=episodes,
         repo_id=args.repo_id,
         remove_keys=args.remove_keys,
+        root_o="/home/jinyu/GitHub/dairy/temp_download_coin",
         image_size=tuple(args.image_size),
     )
 

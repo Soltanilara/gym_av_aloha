@@ -349,12 +349,14 @@ def collect_data(args):
 if __name__ == "__main__":
     import argparse
     # Parse command line arguments
+    print("9999999")
     parser = argparse.ArgumentParser(description="Record simulation episodes for AV Aloha.")
     parser.add_argument("--num-episodes", type=int, default=1, help="Number of episodes to record.")
     parser.add_argument("--env_name", type=str, default="thread-needle-v1", help="Environment task to run.")
     parser.add_argument("--repo-id", type=str, default="iantc104/av_aloha_sim_peg_insertion_test", help="Repository ID for the dataset.")
     parser.add_argument("--root", type=str, default="outputs", help="Root directory for the dataset.")
     parser.add_argument("--task", type=str, default="pick red cube", help="Task name for the dataset.")
+    print("8888888")
     args = parser.parse_args()
     args_dict = vars(args)
     collect_data(args_dict)

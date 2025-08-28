@@ -6,10 +6,6 @@ import numpy as np
 from typing import Callable
 import gym_av_aloha
 from gym_av_aloha.common.replay_buffer import ReplayBuffer
-import numpy as np
-from PIL import Image
-import matplotlib.pyplot as plt
-
 from lerobot.common.datasets.lerobot_dataset import LeRobotDatasetMetadata
 from lerobot.common.datasets.utils import (
     check_delta_timestamps,
@@ -275,7 +271,6 @@ class AVAlohaDataset(torch.utils.data.Dataset):
         self.delta_timestamps = delta_timestamps
         self.tolerance_s = tolerance_s
         self.episodes = episodes
-        self.save_counter=0
 
         # create zarr dataset + lerobot metadata
         print("avalohadataset:",self.root)
@@ -374,8 +369,6 @@ class AVAlohaDataset(torch.utils.data.Dataset):
 
     def __len__(self) -> int:
         return self.num_frames
-    
-
 
     def __getitem__(self, idx: int) -> dict[str, torch.Tensor]:
         ep_idx = self.replay_buffer["episode_index"][idx]
@@ -383,85 +376,21 @@ class AVAlohaDataset(torch.utils.data.Dataset):
 
         query_indices, padding = self._get_query_indices(idx, ep_idx)
         query_result = self._query_replay_buffer(query_indices)
-        #print("query_indices=",query_indices)
         item = {**item, **padding}
-
         for key, val in query_result.items():
             if key in self.image_keys or key in self.video_keys:
-                if self.image_transforms is not None:
-                    #print("***********val.type====",val.type)
-                    # val type is numpy.ndarray
-                    item[key] = [self.image_transforms(v) for v in val]
-                    img=np.array(item[key])
-                    item[key] = torch.from_numpy(img).type(torch.float32) / 255.0
-                else:
-                    item[key] = torch.from_numpy(val).type(torch.float32).permute(0, 3, 1, 2) / 255.0
-                  
+                item[key] = torch.from_numpy(val).type(torch.float32).permute(0, 3, 1, 2) / 255.0
             else:
                 item[key] = torch.from_numpy(val)
 
-        # if self.image_transforms is not None:
-        #     image_keys = self.camera_keys
-        #     print("zjy________zjy========", self.camera_keys)
-        #     for cam in image_keys:
-        #         item[cam] = self.image_transforms(item[cam])
-        
-        
-        # if self.image_transforms is not None:
-        #     image_keys = self.camera_keys
-           
-        #     # for cam in image_keys:
-        #     #     print("cam_=",cam)
-        #     # observation.images.left_eye_cam
-        #     cam="observation.images.left_eye_cam"
+        if self.image_transforms is not None:
+            image_keys = self.camera_keys
+            for cam in image_keys:
+                item[cam] = self.image_transforms(item[cam])
 
-        #     #item[cam] = torch.from_numpy(self.image_transforms(item[cam])).type(torch.float32).permute(0, 3, 1, 2) / 255.0
-        #     #self.save_images(original_img, item[cam], cam)
-    
-      
         # Add task as a string
         if "task_index" in item:
             task_idx = item["task_index"].item()
             item["task"] = self.tasks[task_idx]
 
         return item
-
-
-
-from torchvision import transforms
-from torchvision.transforms import RandomApply
-
-
-transforms_augmentation = transforms.Compose([
-    transforms.ColorJitter(brightness=0.15, contrast=0.15, saturation=0.1),
-    transforms.GaussianBlur(kernel_size=3),
-])
-
-image_transforms_augmentation = transforms.Compose([
-    transforms.ToPILImage(),
-    RandomApply([transforms_augmentation], p=0.7),  
-    transforms.ToTensor(),
-])
-
-import torchvision.transforms as T
-
-# Probabilities (tune these as you like)
-p_blur = 0.3     # 30% chance
-p_jitter = 0.5   # 50% chance
-
-transform_image = T.Compose([
-    transforms.ToTensor(),
-    T.RandomApply(
-        [T.GaussianBlur(kernel_size=(3, 5), sigma=(0.1, 2.0))],
-        p=p_blur
-    ),
-    T.RandomApply(
-        [T.ColorJitter(
-            brightness=0.4,
-            contrast=0.4,
-            saturation=0.4,
-            hue=0.1
-        )],
-        p=p_jitter
-    ),
-])

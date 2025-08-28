@@ -53,9 +53,11 @@ def main():
         episodes=episodes,
         repo_id=args.repo_id,
         remove_keys=args.remove_keys,
+        
         image_size=tuple(args.image_size),
     )
 
 
 if __name__ == "__main__":
     main()
+#root_o="/home/jinyu/GitHub/dairy/temp_download_cirle",

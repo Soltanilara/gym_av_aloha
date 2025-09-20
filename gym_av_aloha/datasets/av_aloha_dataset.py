@@ -388,35 +388,16 @@ class AVAlohaDataset(torch.utils.data.Dataset):
 
         for key, val in query_result.items():
             if key in self.image_keys or key in self.video_keys:
-                if self.image_transforms is not None:
-                    #print("***********val.type====",val.type)
-                    # val type is numpy.ndarray
-                    item[key] = [self.image_transforms(v) for v in val]
-                    img=np.array(item[key])
-                    item[key] = torch.from_numpy(img).type(torch.float32) / 255.0
-                else:
+                
                     item[key] = torch.from_numpy(val).type(torch.float32).permute(0, 3, 1, 2) / 255.0
                   
             else:
                 item[key] = torch.from_numpy(val)
 
-        # if self.image_transforms is not None:
-        #     image_keys = self.camera_keys
-        #     print("zjy________zjy========", self.camera_keys)
-        #     for cam in image_keys:
-        #         item[cam] = self.image_transforms(item[cam])
-        
-        
-        # if self.image_transforms is not None:
-        #     image_keys = self.camera_keys
-           
-        #     # for cam in image_keys:
-        #     #     print("cam_=",cam)
-        #     # observation.images.left_eye_cam
-        #     cam="observation.images.left_eye_cam"
-
-        #     #item[cam] = torch.from_numpy(self.image_transforms(item[cam])).type(torch.float32).permute(0, 3, 1, 2) / 255.0
-        #     #self.save_images(original_img, item[cam], cam)
+        if self.image_transforms is not None:
+            for key in self.camera_keys:
+                if key in self.delta_timestamps:
+                    item[key] = self.image_transforms(item[key])
     
       
         # Add task as a string
@@ -450,7 +431,7 @@ p_blur = 0.3     # 30% chance
 p_jitter = 0.5   # 50% chance
 
 transform_image = T.Compose([
-    transforms.ToTensor(),
+    #transforms.ToTensor(),
     T.RandomApply(
         [T.GaussianBlur(kernel_size=(3, 5), sigma=(0.1, 2.0))],
         p=p_blur

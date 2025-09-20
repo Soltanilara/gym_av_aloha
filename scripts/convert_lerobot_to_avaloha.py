@@ -7,7 +7,7 @@ def main():
     parser.add_argument(
         "--repo_id",
         type=str,
-        default="iantc104/av_aloha_sim_thread_needle",
+        default="Jinyu220/hook_circlev2",
         help="Hugging Face repo ID containing the dataset episodes",
     )
     parser.add_argument(
@@ -53,7 +53,7 @@ def main():
         episodes=episodes,
         repo_id=args.repo_id,
         remove_keys=args.remove_keys,
-        
+        root_o="/home/jinyu/GitHub/dairy/temp_download_sim_thread",
         image_size=tuple(args.image_size),
     )
 

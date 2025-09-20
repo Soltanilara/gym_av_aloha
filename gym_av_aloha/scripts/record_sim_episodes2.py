@@ -338,8 +338,8 @@ def collect_data(args):
             f = { k: torch.tensor(v.reshape(-1).copy().astype(np.float32)) for k, v in frame.items() }
             for key in ts['pixels']:
                 f[f'observation.images.{key}'] = torch.from_numpy(ts['pixels'][key].copy())
-            f['task'] = task
-            dataset.add_frame(f)
+            # f['task'] = task
+            dataset.add_frame(f, task=task)
         dataset.save_episode()
 
     dataset.push_to_hub(
@@ -352,10 +352,10 @@ if __name__ == "__main__":
     print("9999999")
     parser = argparse.ArgumentParser(description="Record simulation episodes for AV Aloha.")
     parser.add_argument("--num-episodes", type=int, default=1, help="Number of episodes to record.")
-    parser.add_argument("--env_name", type=str, default="thread-needle-v1", help="Environment task to run.")
-    parser.add_argument("--repo-id", type=str, default="Jinyu220/av_aloha_sim_peg_insertion1", help="Repository ID for the dataset.")
+    parser.add_argument("--env_name", type=str, default="pour-test-tube-v1", help="Environment task to run.")
+    parser.add_argument("--repo-id", type=str, default="Jinyu220/pour-test-tube-v1", help="Repository ID for the dataset.")
     parser.add_argument("--root", type=str, default="outputs", help="Root directory for the dataset.")
-    parser.add_argument("--task", type=str, default="pick red cube", help="Task name for the dataset.")
+    parser.add_argument("--task", type=str, default="pour-test-tube-v1", help="Task name for the dataset.")
     print("8888888")
     args = parser.parse_args()
     args_dict = vars(args)

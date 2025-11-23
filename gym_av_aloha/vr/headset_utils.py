@@ -5,7 +5,7 @@ from gym_av_aloha.utils.transform_utils import (
     pose2mat,
     mat2pose,
 )
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 TRANSFORM_TO_WORLD = np.ascontiguousarray(np.eye(4))
 TRANSFORM_TO_WORLD[:3, :3] = R.from_euler('xyz', [-90, 0, -90], degrees=True).as_matrix()
@@ -13,10 +13,10 @@ WORLD_TO_TRANSFORM = np.ascontiguousarray(np.linalg.inv(TRANSFORM_TO_WORLD))
 
 @dataclass
 class HeadsetData:
-    h_pos: np.ndarray = np.zeros(3)
-    h_quat: np.ndarray = np.zeros(4)
-    l_pos: np.ndarray = np.zeros(3)
-    l_quat: np.ndarray = np.zeros(4)
+    h_pos: np.ndarray = field(default_factory=lambda: np.zeros(3))
+    h_quat: np.ndarray = field(default_factory=lambda: np.zeros(4))
+    l_pos: np.ndarray = field(default_factory=lambda: np.zeros(3))
+    l_quat: np.ndarray = field(default_factory=lambda: np.zeros(4))
     l_thumbstick_x: float = 0
     l_thumbstick_y: float = 0
     l_index_trigger: float = 0
@@ -24,8 +24,8 @@ class HeadsetData:
     l_button_one: bool = False
     l_button_two: bool = False
     l_button_thumbstick: bool = False
-    r_pos: np.ndarray = np.zeros(3)
-    r_quat: np.ndarray = np.zeros(4)
+    r_pos: np.ndarray = field(default_factory=lambda: np.zeros(3))
+    r_quat: np.ndarray = field(default_factory=lambda: np.zeros(4))
     r_thumbstick_x: float = 0
     r_thumbstick_y: float = 0
     r_index_trigger: float = 0
@@ -33,8 +33,8 @@ class HeadsetData:
     r_button_one: bool = False
     r_button_two: bool = False
     r_button_thumbstick: bool = False
-    l_eye: np.ndarray = np.zeros(2)
-    r_eye: np.ndarray = np.zeros(2)
+    l_eye: np.ndarray = field(default_factory=lambda: np.zeros(2))
+    r_eye: np.ndarray = field(default_factory=lambda: np.zeros(2))
     l_eye_frame_id: int = 0
     r_eye_frame_id: int = 0
 
@@ -44,12 +44,12 @@ class HeadsetFeedback:
     left_out_of_sync: bool = False
     right_out_of_sync: bool = False
     info: str = ""
-    left_arm_position: np.ndarray = np.zeros(3)
-    left_arm_rotation: np.ndarray = np.zeros(4)
-    right_arm_position: np.ndarray = np.zeros(3)
-    right_arm_rotation: np.ndarray = np.zeros(4)
-    middle_arm_position: np.ndarray = np.zeros(3)
-    middle_arm_rotation: np.ndarray = np.zeros(4)
+    left_arm_position: np.ndarray = field(default_factory=lambda: np.zeros(3))
+    left_arm_rotation: np.ndarray = field(default_factory=lambda: np.zeros(4))
+    right_arm_position: np.ndarray = field(default_factory=lambda: np.zeros(3))
+    right_arm_rotation: np.ndarray = field(default_factory=lambda: np.zeros(4))
+    middle_arm_position: np.ndarray = field(default_factory=lambda: np.zeros(3))
+    middle_arm_rotation: np.ndarray = field(default_factory=lambda: np.zeros(4))
 
 @jit(nopython=True, fastmath=True, cache=True)
 def convert_left_to_right_coordinates(left_pos, left_quat):
